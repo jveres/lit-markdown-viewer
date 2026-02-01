@@ -18,6 +18,16 @@ A high-performance Lit Web Component for rendering markdown with streaming suppo
 npm install
 ```
 
+## Development
+
+Start the dev server:
+
+```bash
+npm run dev
+```
+
+Then open http://localhost:5173 in your browser.
+
 ## Usage
 
 ```typescript
@@ -55,40 +65,40 @@ render() {
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    markdown-viewer.ts                        │
-│  ┌─────────────┐  ┌──────────────┐  ┌───────────────────┐  │
-│  │  Throttling │──│   Rendering  │──│    DOM Morphing   │  │
-│  │  (RAF-based)│  │   Pipeline   │  │    (Idiomorph)    │  │
-│  └─────────────┘  └──────────────┘  └───────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-         │                  │                    │
-         ▼                  ▼                    ▼
-┌─────────────────┐ ┌──────────────┐ ┌───────────────────────┐
-│ cursor-controller│ │   parser.ts  │ │       morph.ts        │
-│  (blink state)   │ │              │ │                       │
-└─────────────────┘ │  ┌────────┐  │ │  - Sync morph (stream)│
-                     │  │ Comrak │  │ │  - Async morph (RAF)  │
-                     │  └────────┘  │ │  - Hash-based skip    │
-                     │       │      │ └───────────────────────┘
-                     │       ▼      │
-                     │  ┌────────┐  │
-                     │  │ KaTeX  │  │
-                     │  └────────┘  │
-                     │       │      │
-                     │       ▼      │
-                     │  Post-process│
-                     │  - Code wrap │
-                     │  - Tables    │
-                     │  - Links     │
-                     │  - Colors    │
-                     └──────────────┘
-                            │
-                            ▼
-                    ┌──────────────┐
-                    │cache-manager │
-                    │  (LRU, 10MB) │
-                    └──────────────┘
++-------------------------------------------------------------+
+|                    markdown-viewer.ts                       |
+|  +-------------+  +--------------+  +-------------------+   |
+|  |  Throttling |--|   Rendering  |--|    DOM Morphing   |   |
+|  |  (RAF-based)|  |   Pipeline   |  |    (Idiomorph)    |   |
+|  +-------------+  +--------------+  +-------------------+   |
++-------------------------------------------------------------+
+         |                  |                    |
+         v                  v                    v
++-----------------+ +--------------+ +-----------------------+
+| cursor-controller| |   parser.ts  | |       morph.ts        |
+|  (blink state)   | |              | |                       |
++-----------------+ |  +--------+  | |  - Sync morph (stream)|
+                    |  | Comrak |  | |  - Async morph (RAF)  |
+                    |  +--------+  | |  - Hash-based skip    |
+                    |       |      | +-----------------------+
+                    |       v      |
+                    |  +--------+  |
+                    |  | KaTeX  |  |
+                    |  +--------+  |
+                    |       |      |
+                    |       v      |
+                    |  Post-process|
+                    |  - Code wrap |
+                    |  - Tables    |
+                    |  - Links     |
+                    |  - Colors    |
+                    +--------------+
+                            |
+                            v
+                    +--------------+
+                    |cache-manager |
+                    |  (LRU, 10MB) |
+                    +--------------+
 ```
 
 ## Core Modules
