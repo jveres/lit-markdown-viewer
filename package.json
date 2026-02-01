@@ -1,22 +1,42 @@
 {
-  "name": "test-lit",
-  "private": true,
-  "version": "0.0.0",
+  "name": "lit-markdown-viewer",
+  "version": "0.1.0",
+  "description": "High-performance Lit Web Component for rendering markdown with streaming support, optimized for LLM chat interfaces",
+  "author": "Janos Veres <janos.veres@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jveres/test-lit.git"
+  },
+  "homepage": "https://jveres.github.io/test-lit",
+  "keywords": [
+    "lit",
+    "web-component",
+    "markdown",
+    "streaming",
+    "llm",
+    "chat",
+    "katex",
+    "syntax-highlighting",
+    "gfm"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && gh-pages -d dist"
   },
   "dependencies": {
     "@nick/comrak": "npm:@jsr/nick__comrak@^0.48.0-rc.0",
-    "@types/animejs": "^3.1.13",
     "animejs": "^4.3.5",
     "idiomorph": "^0.7.4",
     "katex": "^0.16.28",
     "lit": "^3.3.2"
   },
   "devDependencies": {
+    "@types/animejs": "^3.1.13",
+    "gh-pages": "^6.3.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1"
   }

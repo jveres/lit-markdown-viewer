@@ -1,6 +1,12 @@
-# Markdown Viewer
+# lit-markdown-viewer
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
+[![Lit](https://img.shields.io/badge/Lit-3.x-324FFF.svg)](https://lit.dev/)
 
 A high-performance Lit Web Component for rendering markdown with streaming support, optimized for LLM chat interfaces.
+
+**[Live Demo](https://jveres.github.io/test-lit)** · [Report Bug](https://github.com/jveres/test-lit/issues) · [Request Feature](https://github.com/jveres/test-lit/issues)
 
 ## Features
 
