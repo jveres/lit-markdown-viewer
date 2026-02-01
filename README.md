@@ -6,7 +6,7 @@
 
 A high-performance Lit Web Component for rendering markdown with streaming support, optimized for LLM chat interfaces.
 
-**[Live Demo](https://jveres.github.io/test-lit)** · [Report Bug](https://github.com/jveres/test-lit/issues) · [Request Feature](https://github.com/jveres/test-lit/issues)
+**[Live Demo](https://jveres.github.io/lit-markdown-viewer)** · [Report Bug](https://github.com/jveres/lit-markdown-viewer/issues) · [Request Feature](https://github.com/jveres/lit-markdown-viewer/issues)
 
 ## Features
 

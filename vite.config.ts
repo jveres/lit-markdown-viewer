@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/test-lit/',
+  base: '/lit-markdown-viewer/',
   build: {
     target: 'esnext',
   },

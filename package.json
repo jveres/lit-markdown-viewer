@@ -6,9 +6,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jveres/test-lit.git"
+    "url": "https://github.com/jveres/lit-markdown-viewer.git"
   },
-  "homepage": "https://jveres.github.io/test-lit",
+  "homepage": "https://jveres.github.io/lit-markdown-viewer",
   "keywords": [
     "lit",
     "web-component",
