@@ -48,26 +48,26 @@ render() {
 
 ## Properties
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `text` | `string` | `''` | Markdown source text |
+| Property       | Type      | Default | Description                                 |
+| -------------- | --------- | ------- | ------------------------------------------- |
+| `text`         | `string`  | `''`    | Markdown source text                        |
 | `is-streaming` | `boolean` | `false` | Enable streaming mode (throttling + cursor) |
-| `throttle-ms` | `number` | `50` | Minimum ms between updates during streaming |
+| `throttle-ms`  | `number`  | `50`    | Minimum ms between updates during streaming |
 
 ## Methods
 
-| Method | Description |
-|--------|-------------|
-| `reset()` | Clear internal state (call when switching content sources) |
-| `static clearAllCaches()` | Clear all global caches (memory management) |
-| `static getCacheStats()` | Get cache statistics for debugging |
+| Method                    | Description                                                |
+| ------------------------- | ---------------------------------------------------------- |
+| `reset()`                 | Clear internal state (call when switching content sources) |
+| `static clearAllCaches()` | Clear all global caches (memory management)                |
+| `static getCacheStats()`  | Get cache statistics for debugging                         |
 
 ## Architecture
 
 ```text
-┌────────────────────────────────────────────────────────┐
-│                  markdown-viewer.ts                    │
-│                                                        │
+┌───────────────────────────────────────────────────────┐
+│                  markdown-viewer.ts                   │
+│                                                       │
 │  ┌───────────┐  ┌───────────┐  ┌───────────────────┐  │
 │  │ Throttling│─▶│ Rendering │─▶│   DOM Morphing    │  │
 │  │(RAF-based)│  │  Pipeline │  │   (Idiomorph)     │  │
@@ -114,6 +114,7 @@ renderMarkdown(src: string, useSyncStrategy: boolean): string
 ```
 
 **Supported Extensions:**
+
 - Strikethrough (`~~text~~`)
 - Tables (GFM)
 - Autolinks
@@ -140,6 +141,7 @@ resetMorphCache(): void
 ```
 
 **Features:**
+
 - Hash-based change detection (skips identical content)
 - Preserves text selection during updates
 - `data-morph-ignore` attribute to protect nodes from removal
@@ -148,21 +150,21 @@ resetMorphCache(): void
 
 Centralized LRU cache with memory budget (~10MB default):
 
-| Cache | Purpose | Budget |
-|-------|---------|--------|
-| `renderCacheSync` | Sync-strategy HTML output | 25% |
-| `renderCacheAsync` | Async-strategy HTML output | 25% |
-| `katexCacheDisplay` | Block math output | 20% |
-| `katexCacheInline` | Inline math output | 20% |
-| `morphCache` | DOM state hashes | 10% |
+| Cache               | Purpose                    | Budget |
+| ------------------- | -------------------------- | ------ |
+| `renderCacheSync`   | Sync-strategy HTML output  | 25%    |
+| `renderCacheAsync`  | Async-strategy HTML output | 25%    |
+| `katexCacheDisplay` | Block math output          | 20%    |
+| `katexCacheInline`  | Inline math output         | 20%    |
+| `morphCache`        | DOM state hashes           | 10%    |
 
 ```typescript
 // Access stats
-cacheManager.stats
+cacheManager.stats;
 
 // Manual cleanup
-cacheManager.clearAll()
-cacheManager.trimIfNeeded()
+cacheManager.clearAll();
+cacheManager.trimIfNeeded();
 ```
 
 ### `cursor-controller.ts`
@@ -172,16 +174,17 @@ Manages cursor blink animation during streaming:
 ```typescript
 const controller = createCursorController({
   blinkEnabled: true,
-  blinkSpeed: 1.0,    // seconds
-  blinkDelay: 1.0     // seconds before blink starts
+  blinkSpeed: 1.0, // seconds
+  blinkDelay: 1.0, // seconds before blink starts
 });
 
-controller.update(container);  // Call on each content update
-controller.reset();            // Reset blink state
-controller.destroy();          // Cleanup
+controller.update(container); // Call on each content update
+controller.reset(); // Reset blink state
+controller.destroy(); // Cleanup
 ```
 
 **Behavior:**
+
 - Cursor stays solid while receiving updates
 - Starts blinking after 500ms idle
 - Uses CSS animation toggling to restart blink cycle
@@ -219,27 +222,27 @@ private _updateThrottledText(): void {
 
 ### Rendering Strategy
 
-| Mode | Morph | Description |
-|------|-------|-------------|
-| Streaming | Sync | Immediate DOM updates for cursor visibility |
-| Post-streaming | Async | RAF-batched updates to prevent jank |
-| Static | None | Direct `unsafeHTML` render |
+| Mode           | Morph | Description                                 |
+| -------------- | ----- | ------------------------------------------- |
+| Streaming      | Sync  | Immediate DOM updates for cursor visibility |
+| Post-streaming | Async | RAF-batched updates to prevent jank         |
+| Static         | None  | Direct `unsafeHTML` render                  |
 
 ## Autoscroll Utility
 
 Located in `src/utils/animate-scroll.ts`:
 
 ```typescript
-import { 
-  animateScrollToBottom, 
-  cancelScrollAnimation, 
-  isAtBottom 
-} from './utils/animate-scroll';
+import {
+  animateScrollToBottom,
+  cancelScrollAnimation,
+  isAtBottom,
+} from "./utils/animate-scroll";
 
 // Animated scroll with dynamic target (handles content growth)
 animateScrollToBottom(container, {
   dynamicTarget: true,
-  afterDelay: 0
+  afterDelay: 0,
 });
 
 // Cancel on user interaction
@@ -252,6 +255,7 @@ if (isAtBottom(container, 50)) {
 ```
 
 **Features:**
+
 - Browser-native easing curve (`cubic-bezier(0.25, 0.1, 0.25, 1.0)`)
 - Dynamic target recalculation (handles image loads, etc.)
 - Coalesces rapid calls (won't restart if already animating to bottom)
@@ -289,7 +293,7 @@ if (isAtBottom(container, 50)) {
 Add `dark` class to enable dark theme:
 
 ```html
-<markdown-viewer class="dark" .text=${content}></markdown-viewer>
+<markdown-viewer class="dark" .text="${content}"></markdown-viewer>
 ```
 
 ## Performance Tips
@@ -301,12 +305,12 @@ Add `dark` class to enable dark theme:
 
 ## Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| `lit` | Web component framework |
+| Package        | Purpose                     |
+| -------------- | --------------------------- |
+| `lit`          | Web component framework     |
 | `@nick/comrak` | Markdown parser (Rust/WASM) |
-| `katex` | Math rendering |
-| `idiomorph` | DOM morphing |
+| `katex`        | Math rendering              |
+| `idiomorph`    | DOM morphing                |
 
 ## Browser Support
 
@@ -316,6 +320,7 @@ Add `dark` class to enable dark theme:
 - Edge 90+
 
 Requires support for:
+
 - Custom Elements v1
 - Shadow DOM v1
 - ES2020+
