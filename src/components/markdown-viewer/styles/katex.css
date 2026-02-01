@@ -1,0 +1,11 @@
+.markdown .katex {
+  font-size: 1em;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: clip;
+}
+
+.markdown .katex-display {
+  text-align: left !important;
+  margin-left: 0 !important;
+}

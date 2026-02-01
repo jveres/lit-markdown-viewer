@@ -1,0 +1,478 @@
+/* Light theme */
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  --color-canvas-default: #ffffff;
+  --color-canvas-subtle: #f6f8fa;
+  --color-border-default: #d0d7de;
+  --color-border-muted: hsla(210, 18%, 87%, 1);
+  --color-muted-foreground: #656d76;
+  --color-muted-bg: rgba(0, 0, 0, 0.05);
+  --cursor-color: #f5a1ff;
+  --cursor-border-radius: 2px;
+}
+
+/* Dark theme */
+:host(.dark) {
+  --color-canvas-default: #0d1117;
+  --color-canvas-subtle: #161b22;
+  --color-border-default: #30363d;
+  --color-border-muted: #21262d;
+  --color-muted-foreground: #8b949e;
+  --color-muted-bg: rgba(255, 255, 255, 0.05);
+  --cursor-color: #ab65f7;
+}
+
+/* Markdown styling */
+.markdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  contain: layout style;
+  isolation: isolate;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  line-height: 1.6;
+  color: inherit;
+  min-width: 0;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdown p {
+  margin: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+
+.markdown h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.markdown h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.markdown h3,
+.markdown h4 {
+  font-weight: 500;
+}
+
+.markdown h5,
+.markdown h6 {
+  font-weight: 400;
+}
+
+.markdown strong {
+  font-weight: 600;
+}
+
+.markdown em,
+.markdown i {
+  font-style: italic;
+  font-synthesis: style;
+}
+
+.markdown mark {
+  border-radius: 0.125rem;
+  background-color: #fef08a;
+  padding: 0.125rem 0.25rem;
+}
+
+:host(.dark) .markdown mark {
+  background-color: rgba(203, 213, 225, 0.3);
+  color: #e2e8f0;
+}
+
+.markdown hr {
+  margin: 0.5rem 0;
+  border: none;
+  border-top: 1px solid var(--color-border-default);
+}
+
+.markdown blockquote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  border-left: 2px solid var(--color-border-default);
+  padding: 0.25rem 0 0.25rem 1rem;
+  font-style: italic;
+}
+
+.markdown a {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: top;
+  color: #0066cc;
+  text-decoration: none;
+}
+
+.markdown a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+:host(.dark) .markdown a {
+  color: #66b3ff;
+}
+
+.markdown pre {
+  position: relative;
+  margin: 0;
+  width: fit-content;
+  max-width: 100%;
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+.markdown *:not(pre) > code {
+  border-radius: 0.125rem;
+  background-color: #f1f5f9;
+  padding: 0 0.25rem;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo,
+    monospace;
+  font-size: 0.9em;
+  overflow-wrap: break-word;
+  color: #475569;
+}
+
+:host(.dark) .markdown *:not(pre) > code {
+  background-color: #1e1b4b;
+  color: #94a3b8;
+}
+
+.markdown pre code {
+  position: relative;
+  display: block;
+  overflow-x: auto;
+  border-radius: 0.125rem;
+  border: 1px solid #a2a7bb;
+  background-color: #ffffff;
+  padding: 0.5rem;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo,
+    monospace;
+  font-size: 0.8em;
+  color: #8589a0;
+  cursor: text;
+  scrollbar-gutter: auto;
+}
+
+:host(.dark) .markdown pre code {
+  border-color: #8589a0;
+  background-color: #000000;
+  color: #8589a0;
+}
+
+/* Code block wrapper with copy button */
+.markdown .code-block-wrapper {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.markdown .code-block-wrapper pre {
+  margin: 0.5rem 0;
+}
+
+.markdown .copy-btn {
+  position: absolute;
+  top: 1rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+  z-index: 1;
+}
+
+.markdown .code-block-wrapper:hover .copy-btn {
+  opacity: 1;
+}
+
+.markdown .copy-btn:hover {
+  color: inherit;
+}
+
+.markdown .copy-btn:active {
+  transform: scale(0.95);
+}
+
+.markdown .copy-btn .copy-icon,
+.markdown .copy-btn .check-icon {
+  flex-shrink: 0;
+}
+
+.markdown .copy-btn .check-icon {
+  display: none;
+}
+
+.markdown .copy-btn.copied .copy-icon {
+  display: none;
+}
+
+.markdown .copy-btn.copied .check-icon {
+  display: block;
+  color: #22c55e;
+}
+
+.markdown .copy-btn.copied {
+  opacity: 1;
+}
+
+.markdown .code-line {
+  display: inline-block;
+}
+
+.markdown .color-box {
+  position: relative;
+  top: -0.1em;
+  display: inline-block;
+  margin-right: 0.1em;
+  height: 0.8em;
+  width: 0.8em;
+  border-radius: 2px;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+  vertical-align: middle;
+}
+
+/* Definition lists */
+.markdown dt {
+  font-weight: 600;
+  font-style: italic;
+}
+
+.markdown dd {
+  padding-left: 1rem;
+}
+
+/* Base styles for all (normal) lists */
+.markdown ul,
+.markdown ol {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style-position: outside;
+}
+
+.markdown li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown li:first-child {
+  margin-top: 0.25rem;
+}
+
+.markdown ol li {
+  list-style-type: decimal;
+}
+
+.markdown ul li {
+  list-style-type: disc;
+}
+
+/* TASK LISTS */
+
+/* Root-level task list container: no extra padding/margin */
+.markdown > ul.contains-task-list {
+  margin-left: 0;
+  padding-left: 0;
+}
+
+/* Root-level task items: no left padding/margin */
+.markdown > ul.contains-task-list > li.task-list-item {
+  margin-left: 0;
+  padding-left: 0;
+  list-style-type: none;
+}
+
+/* Nested lists (normal or task) keep indentation */
+.markdown li > ul,
+.markdown li > ol {
+  margin-left: 0;
+  padding-left: 1.5rem;
+}
+
+.markdown .task-list-item {
+  list-style-type: none;
+}
+
+/* Table styling */
+.markdown .table-wrapper {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.markdown table {
+  position: static;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  overflow: auto;
+  border-collapse: collapse;
+}
+
+.markdown tr {
+  background-color: var(--color-canvas-default);
+  border-top: 1px solid var(--color-border-muted);
+}
+
+.markdown th {
+  background-color: var(--color-muted-bg);
+  font-weight: 600;
+  text-align: unset;
+}
+
+.markdown tr:nth-child(2n) {
+  background-color: var(--color-canvas-subtle);
+}
+
+.markdown td,
+.markdown th {
+  padding: 6px 13px;
+  border: 1px solid var(--color-border-default);
+}
+
+.markdown table img {
+  background-color: transparent;
+}
+
+/* Footnotes */
+.markdown section.footnotes {
+  padding-top: 0.25rem;
+  font-size: 0.8em;
+  color: var(--color-muted-foreground);
+}
+
+.markdown .footnote-ref {
+  font-size: 0.5em;
+  line-height: 1;
+}
+
+.markdown .footnote-ref > a {
+  display: inline-flex;
+  padding: 0 1px;
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+
+.markdown a.footnote-backref {
+  font-size: 0;
+}
+
+.markdown a.footnote-backref::before {
+  content: "";
+  font-size: 1rem;
+}
+
+.markdown section.footnotes ol {
+  list-style-type: none;
+  counter-reset: footnotes-counter;
+  padding-left: 0;
+}
+
+.markdown section.footnotes ol li {
+  counter-increment: footnotes-counter;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.markdown section.footnotes ol li::before {
+  content: counter(footnotes-counter) ".";
+  line-height: 1;
+  color: var(--color-muted-foreground);
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.markdown section.footnotes ol li > p {
+  margin: 0;
+}
+
+/* Streaming cursor - uses ::after for proper rendering */
+.markdown .cursor::after {
+  content: "";
+  display: inline-block;
+  width: 0.6em;
+  min-height: 1em !important;
+  background-color: var(--cursor-color);
+  vertical-align: middle;
+
+  /* Safari fix: GPU acceleration prevents ghost shadows */
+  transform: translateY(-0.08em) translateZ(0);
+
+  /* Hint browser to optimize for movement and filter repaints */
+  will-change: transform, filter;
+
+  border-radius: var(--cursor-border-radius);
+  pointer-events: none !important;
+  filter: drop-shadow(0 0 6px var(--cursor-color));
+
+  /* Blink animation controlled by cursor controller via CSS variables.
+     --cursor-blink-name toggles between cursor-blink and cursor-blink- to restart animation.
+     --cursor-blink-duration controls speed (default 1s).
+     --cursor-blink-delay controls delay before blinking starts (default 1s). */
+  animation: var(--cursor-blink-name, cursor-blink)
+    var(--cursor-blink-duration, 1s) step-end var(--cursor-blink-delay, 1s)
+    infinite;
+}
+
+/* Primary blink keyframes */
+@keyframes cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Alternate blink keyframes - toggling between these restarts the animation */
+@keyframes cursor-blink- {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* When cursor is active (receiving updates), stay solid - no blink */
+.markdown .cursor.cursor-active::after {
+  animation: none;
+  opacity: 1;
+}

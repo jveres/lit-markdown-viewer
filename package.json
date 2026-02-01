@@ -1,0 +1,23 @@
+{
+  "name": "test-lit",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@nick/comrak": "npm:@jsr/nick__comrak@^0.48.0-rc.0",
+    "@types/animejs": "^3.1.13",
+    "animejs": "^4.3.5",
+    "idiomorph": "^0.7.4",
+    "katex": "^0.16.28",
+    "lit": "^3.3.2"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
+  }
+}
