@@ -6,7 +6,7 @@
 
 A high-performance Lit Web Component for rendering markdown with streaming support, optimized for LLM chat interfaces.
 
-**[Live Demo](https://jveres.github.io/lit-markdown-viewer)** · [Report Bug](https://github.com/jveres/lit-markdown-viewer/issues) · [Request Feature](https://github.com/jveres/lit-markdown-viewer/issues)
+**[Live Demo](https://jveres.github.io/lit-markdown-viewer)** · **[Interactive Playground](playground.html)** · [Report Bug](https://github.com/jveres/lit-markdown-viewer/issues) · [Request Feature](https://github.com/jveres/lit-markdown-viewer/issues)
 
 ## Features
 
@@ -45,6 +45,24 @@ The [live demo](https://jveres.github.io/lit-markdown-viewer) includes:
 - **Collapsible controls** - Collapsed by default on mobile
 - **Mobile optimized** - Safe area support for iPhone notch/home indicator
 - **Dark mode** - Follows system preference
+
+## Interactive Playground
+
+The [playground](playground.html) provides a visual, interactive explanation of the component's internals:
+
+- **Architecture Overview** - Flow diagram of the rendering pipeline
+- **Lit Reactivity System** - `@property` vs `@state` decorators with animated demos
+- **Lifecycle Methods** - Interactive timeline of `connectedCallback` → `willUpdate` → `render` → `updated`
+- **Rendering Strategies** - Visual comparison of static vs sync (morphing) modes
+- **Optimized Morphing** - Element-level hashing visualization with skip/update/add stats
+- **Adaptive Throttling** - Live gauge showing morph time budget (target: 25% of interval)
+- **Streaming Stats** - Performance metrics simulation (morphs, avg/max times, throttle scaling)
+- **Lazy KaTeX** - Before/after comparison of on-demand loading
+- **Cache System** - Memory budget allocation visualization (10MB across 5 caches)
+- **Cursor Controller** - Blink state machine demo
+- **Live Playground** - Real-time markdown rendering and streaming simulation
+
+Supports light/dark themes (auto-detects system preference).
 
 ## Usage
 
