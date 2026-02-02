@@ -8,7 +8,7 @@ A comprehensive demonstration of all supported markdown features, edge cases, an
 
 ### Basic Formatting
 
-This is regular paragraph text. It can contain **bold text**, *italic text*, ***bold and italic***, ~~strikethrough~~, and `inline code`. You can also use __underscores for underline__ and _underscores for italic_.
+This is regular paragraph text. It can contain **bold text**, *italic text*, ***bold and italic***, ~~strikethrough~~, and `inline code`. You can also use __underscores for underline__ and _underscores for italic_. Combined styles work too: **__bold and underline__**, *__italic and underline__*, ~~**strikethrough and bold**~~.
 
 ### Special Characters & Escaping
 

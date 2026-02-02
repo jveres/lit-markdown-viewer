@@ -59,6 +59,21 @@ describe('parser', () => {
         expect(result).toContain('<em>italic</em>');
       });
 
+      it('should render combined bold and underline', () => {
+        const result = renderMarkdown('**__bold and underline__**', false);
+        expect(result).toContain('<strong><u>bold and underline</u></strong>');
+      });
+
+      it('should render combined italic and underline', () => {
+        const result = renderMarkdown('*__italic and underline__*', false);
+        expect(result).toContain('<em><u>italic and underline</u></em>');
+      });
+
+      it('should render combined strikethrough and bold', () => {
+        const result = renderMarkdown('~~**strikethrough and bold**~~', false);
+        expect(result).toContain('<del><strong>strikethrough and bold</strong></del>');
+      });
+
       it('should render inline code', () => {
         const result = renderMarkdown('`code`', false);
         expect(result).toContain('<code>');
