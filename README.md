@@ -17,6 +17,7 @@ A high-performance Lit Web Component for rendering markdown with streaming suppo
 - **Smart Caching** - LRU caches for rendered content, KaTeX output, and DOM state
 - **Cursor Animation** - Blinking cursor during streaming with focus-aware styling (solid when focused, hollow frame when unfocused)
 - **Dark Mode** - Full dark theme support via CSS class
+- **XSS Protection** - Comprehensive security against script injection, event handlers, and malicious URLs (69 security tests)
 
 ## Installation
 
@@ -382,17 +383,52 @@ npm run test:component:coverage  # Component tests (istanbul)
 
 ```
 tests/
-├── unit/                          # Node environment (119 tests)
-│   ├── cache-manager.test.ts      # LRU cache tests
-│   ├── cursor-controller.test.ts  # Cursor blink state tests
-│   ├── parser.test.ts             # Markdown rendering tests
-│   ├── animate-scroll.test.ts     # Scroll utility tests
-│   └── utils.test.ts              # HTML decode tests
-└── component/                     # Browser environment - Playwright (60 tests)
-    ├── markdown-viewer.test.ts    # Component rendering, streaming, focus
-    ├── morph.test.ts              # DOM morphing, hash skip, data-morph-ignore
-    └── animate-scroll.test.ts     # Scroll animations, RAF, cancellation
+├── unit/                            # Node environment (188 tests)
+│   ├── cache-manager.test.ts        # LRU cache tests
+│   ├── cursor-controller.test.ts    # Cursor blink state tests
+│   ├── parser.test.ts               # Markdown rendering tests
+│   ├── parser.security.test.ts      # Security/XSS tests (69 tests)
+│   ├── animate-scroll.test.ts       # Scroll utility tests
+│   └── utils.test.ts                # HTML decode tests
+└── component/                       # Browser environment - Playwright (60 tests)
+    ├── markdown-viewer.test.ts      # Component rendering, streaming, focus
+    ├── morph.test.ts                # DOM morphing, hash skip, data-morph-ignore
+    └── animate-scroll.test.ts       # Scroll animations, RAF, cancellation
 ```
+
+## Security
+
+The markdown parser includes comprehensive XSS protection, particularly important for LLM chat interfaces where untrusted content may be rendered.
+
+### Security Features
+
+- **Raw HTML disabled** - Comrak configured with `unsafe: false`
+- **Dangerous tags blocked** - `<script>`, `<iframe>`, `<object>`, `<embed>`, `<form>`, etc.
+- **Event handlers stripped** - `onerror`, `onclick`, `onload`, `onmouseover`, etc.
+- **Malicious URLs blocked** - `javascript:`, `vbscript:`, dangerous `data:` URIs
+- **SVG sanitization** - SVG-based XSS vectors neutralized
+- **Style injection blocked** - CSS expressions and `javascript:` in styles
+- **External links secured** - Auto-adds `target="_blank" rel="noopener noreferrer"`
+
+### Security Test Coverage (69 tests)
+
+| Category | Tests | Description |
+|----------|-------|-------------|
+| Script injection | 5 | `<script>` tags, nested scripts |
+| Event handlers | 8 | `onerror`, `onclick`, `onload`, etc. |
+| JavaScript URLs | 6 | `javascript:`, `vbscript:`, encoded variants |
+| Data URIs | 3 | Malicious `data:` URL payloads |
+| SVG injection | 4 | SVG `onload`, `<script>`, `foreignObject` |
+| Style injection | 3 | CSS expressions, `javascript:` in styles |
+| HTML injection | 10 | `<iframe>`, `<object>`, `<form>`, `<meta>`, etc. |
+| Prompt injection UI | 6 | Fake system messages, hidden content, RTL |
+| Link safety | 5 | External links, special characters, unicode |
+| Code blocks | 4 | HTML escaping in code |
+| Image safety | 4 | Malformed URLs, event handler injection |
+| Math/KaTeX | 3 | Script injection via math |
+| Tables | 2 | XSS in table cells |
+| Malformed markdown | 4 | Nested structures, parser confusion |
+| DoS prevention | 3 | Long input, regex attacks |
 
 ## Browser Support
 
