@@ -275,6 +275,13 @@ export class DemoPage extends LitElement {
       border-radius: 0.5rem;
       border: 1px solid #e2e8f0;
       overflow: auto;
+
+      /* Minimal scrollbar */
+      isolation: isolate;
+      scrollbar-color: #d0d7de transparent;
+      scrollbar-gutter: stable;
+      scrollbar-width: thin;
+      will-change: scroll-position;
     }
 
     markdown-viewer {
@@ -350,6 +357,7 @@ export class DemoPage extends LitElement {
       background-color: #1e293b;
       border-color: #334155;
       color: #e2e8f0;
+      scrollbar-color: #475569 transparent;
     }
 
     :host(.dark) .status-label,
