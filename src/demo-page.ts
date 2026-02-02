@@ -1,373 +1,40 @@
 import { LitElement, html, css } from "lit";
-import { customElement, state, query } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
+import { customElement, state } from "lit/decorators.js";
 import { animate } from "animejs";
 
 import "./components/markdown-viewer/markdown-viewer";
 import type { MarkdownViewer } from "./components/markdown-viewer/markdown-viewer";
-import { sampleMarkdown } from "./sample-markdown";
 import {
   animateScrollToBottom,
   cancelScrollAnimation,
   isAtBottom,
 } from "./utils/animate-scroll";
 
+// Scenario imports
+import {
+  // Streaming scenario
+  getInitialStreamingState,
+  getEmptyStreamingState,
+  getFullStreamingState,
+  getSampleMarkdown,
+  renderStreamingControls,
+  renderStreamingViewer,
+  renderStreamingStatus,
+  // Chat scenario
+  generateChatMessages,
+  getInitialChatState,
+  getEmptyChatState,
+  renderChatControls,
+  renderChatViewer,
+  renderChatStatus,
+} from "./scenarios";
+import type { ChatMessage } from "./scenarios";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Scenario = "streaming" | "chat";
-
-interface ChatMessage {
-  id: number;
-  role: "user" | "assistant";
-  content: string;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sample Chat Data
-// ─────────────────────────────────────────────────────────────────────────────
-
-const SAMPLE_USER_MESSAGES = [
-  "What is TypeScript and why should I use it?",
-  "Can you show me an example of TypeScript interfaces?",
-  "How do generics work in TypeScript?",
-  "What's the difference between `type` and `interface`?",
-  "Explain TypeScript decorators",
-  "How do I handle null and undefined in TypeScript?",
-  "What are mapped types?",
-  "Can you explain conditional types?",
-  "How do I migrate a JavaScript project to TypeScript?",
-  "What are some TypeScript best practices?",
-  "How does type inference work?",
-  "What is the `unknown` type?",
-  "Explain discriminated unions",
-  "How do I type React components with TypeScript?",
-  "What are template literal types?",
-  "How do I use TypeScript with Node.js?",
-  "What is `satisfies` keyword?",
-  "How do I create type guards?",
-  "What are utility types in TypeScript?",
-  "How do I handle async/await with proper types?",
-  "What is declaration merging?",
-  "How do I type third-party libraries without types?",
-  "Explain the `infer` keyword",
-  "What are const assertions?",
-  "How do I set up a TypeScript monorepo?",
-];
-
-const SAMPLE_ASSISTANT_RESPONSES = [
-  `**TypeScript** is a strongly typed programming language that builds on JavaScript, giving you better tooling at any scale.
-
-## Key Benefits
-
-1. **Type Safety** - Catch errors at compile time rather than runtime
-2. **Better IDE Support** - Autocompletion, refactoring, and inline documentation
-3. **Self-Documenting Code** - Types serve as documentation
-4. **Easier Refactoring** - The compiler catches breaking changes
-
-\`\`\`typescript
-// Example: Type safety in action
-function greet(name: string): string {
-  return \`Hello, \${name}!\`;
-}
-
-greet("World"); // ✅ OK
-greet(42);      // ❌ Error: Argument of type 'number' is not assignable
-\`\`\``,
-
-  `Here's an example of TypeScript interfaces:
-
-\`\`\`typescript
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  age?: number; // Optional property
-  readonly createdAt: Date; // Read-only property
-}
-
-interface Admin extends User {
-  permissions: string[];
-}
-
-const user: User = {
-  id: 1,
-  name: "John Doe",
-  email: "john@example.com",
-  createdAt: new Date()
-};
-\`\`\`
-
-Interfaces can also describe function types:
-
-\`\`\`typescript
-interface SearchFunc {
-  (source: string, subString: string): boolean;
-}
-
-const mySearch: SearchFunc = (src, sub) => src.includes(sub);
-\`\`\``,
-
-  `## Generics in TypeScript
-
-Generics allow you to write reusable, type-safe code:
-
-\`\`\`typescript
-// Generic function
-function identity<T>(arg: T): T {
-  return arg;
-}
-
-// Usage - type is inferred
-const num = identity(42);      // num: number
-const str = identity("hello"); // str: string
-
-// Generic interface
-interface Box<T> {
-  value: T;
-  getValue(): T;
-}
-
-// Generic class
-class Container<T> {
-  private items: T[] = [];
-  
-  add(item: T): void {
-    this.items.push(item);
-  }
-  
-  get(index: number): T {
-    return this.items[index];
-  }
-}
-
-// Generic constraints
-function getLength<T extends { length: number }>(arg: T): number {
-  return arg.length;
-}
-\`\`\``,
-
-  `## \`type\` vs \`interface\`
-
-| Feature | \`interface\` | \`type\` |
-|---------|-------------|---------|
-| Extend/Inherit | ✅ \`extends\` | ✅ \`&\` intersection |
-| Declaration merging | ✅ Yes | ❌ No |
-| Computed properties | ❌ No | ✅ Yes |
-| Union types | ❌ No | ✅ Yes |
-| Mapped types | ❌ No | ✅ Yes |
-
-\`\`\`typescript
-// Interface - can be extended and merged
-interface Animal {
-  name: string;
-}
-interface Animal {
-  age: number; // Declaration merging
-}
-
-// Type - more flexible
-type ID = string | number; // Union
-type Point = { x: number; y: number };
-type Coordinate = Point & { z: number }; // Intersection
-\`\`\`
-
-**Rule of thumb:** Use \`interface\` for object shapes, \`type\` for everything else.`,
-
-  `## TypeScript Decorators
-
-Decorators are special declarations that can modify classes, methods, or properties:
-
-\`\`\`typescript
-// Method decorator
-function log(target: any, key: string, descriptor: PropertyDescriptor) {
-  const original = descriptor.value;
-  descriptor.value = function(...args: any[]) {
-    console.log(\`Calling \${key} with:\`, args);
-    return original.apply(this, args);
-  };
-}
-
-// Class decorator
-function sealed(constructor: Function) {
-  Object.seal(constructor);
-  Object.seal(constructor.prototype);
-}
-
-@sealed
-class Calculator {
-  @log
-  add(a: number, b: number): number {
-    return a + b;
-  }
-}
-\`\`\`
-
-> **Note:** Enable \`experimentalDecorators\` in tsconfig.json`,
-
-  `## Handling \`null\` and \`undefined\`
-
-TypeScript provides several ways to handle nullable values:
-
-\`\`\`typescript
-// Strict null checks (enable in tsconfig)
-let name: string | null = null;
-
-// Optional chaining
-const length = name?.length; // number | undefined
-
-// Nullish coalescing
-const displayName = name ?? "Anonymous";
-
-// Non-null assertion (use carefully!)
-const definitelyName = name!; // Asserts non-null
-
-// Type guard
-function isNotNull<T>(value: T | null): value is T {
-  return value !== null;
-}
-
-if (isNotNull(name)) {
-  console.log(name.toUpperCase()); // name is string here
-}
-\`\`\``,
-
-  `## Mapped Types
-
-Mapped types transform existing types:
-
-\`\`\`typescript
-// Built-in mapped types
-type Partial<T> = { [P in keyof T]?: T[P] };
-type Required<T> = { [P in keyof T]-?: T[P] };
-type Readonly<T> = { readonly [P in keyof T]: T[P] };
-
-// Custom mapped type
-type Nullable<T> = { [P in keyof T]: T[P] | null };
-
-interface User {
-  name: string;
-  age: number;
-}
-
-type NullableUser = Nullable<User>;
-// { name: string | null; age: number | null }
-
-// Key remapping (TS 4.1+)
-type Getters<T> = {
-  [K in keyof T as \`get\${Capitalize<string & K>}\`]: () => T[K]
-};
-\`\`\``,
-
-  `## Conditional Types
-
-Conditional types select types based on conditions:
-
-\`\`\`typescript
-// Basic syntax: T extends U ? X : Y
-type IsString<T> = T extends string ? true : false;
-
-type A = IsString<string>;  // true
-type B = IsString<number>;  // false
-
-// Extract and Exclude
-type Extract<T, U> = T extends U ? T : never;
-type Exclude<T, U> = T extends U ? never : T;
-
-type T1 = Extract<"a" | "b" | "c", "a" | "f">;  // "a"
-type T2 = Exclude<"a" | "b" | "c", "a">;        // "b" | "c"
-
-// Distributive conditional types
-type ToArray<T> = T extends any ? T[] : never;
-type StrOrNumArray = ToArray<string | number>; // string[] | number[]
-\`\`\``,
-
-  `## Migrating JavaScript to TypeScript
-
-### Step-by-step approach:
-
-1. **Add TypeScript to your project**
-\`\`\`bash
-npm install typescript --save-dev
-npx tsc --init
-\`\`\`
-
-2. **Start with loose settings in tsconfig.json**
-\`\`\`json
-{
-  "compilerOptions": {
-    "allowJs": true,
-    "checkJs": false,
-    "strict": false,
-    "noImplicitAny": false
-  }
-}
-\`\`\`
-
-3. **Rename files gradually**: \`.js\` → \`.ts\`
-
-4. **Add types incrementally**
-   - Start with \`any\` where needed
-   - Replace \`any\` with proper types over time
-
-5. **Enable strict mode gradually**
-\`\`\`json
-{
-  "strict": true // Enable when ready
-}
-\`\`\``,
-
-  `## TypeScript Best Practices
-
-### Do ✅
-- Enable \`strict\` mode
-- Use \`unknown\` instead of \`any\`
-- Prefer interfaces for public APIs
-- Use \`readonly\` for immutable data
-- Let TypeScript infer when possible
-
-### Don't ❌
-- Overuse \`any\`
-- Use \`// @ts-ignore\` without good reason
-- Export mutable objects
-- Ignore compiler warnings
-
-\`\`\`typescript
-// ✅ Good
-function process(data: unknown): string {
-  if (typeof data === "string") {
-    return data.toUpperCase();
-  }
-  throw new Error("Expected string");
-}
-
-// ❌ Avoid
-function process(data: any): any {
-  return data.toUpperCase(); // No type safety
-}
-\`\`\``,
-];
-
-function generateChatMessages(count: number): ChatMessage[] {
-  const messages: ChatMessage[] = [];
-  const pairs = Math.floor(count / 2);
-  
-  for (let i = 0; i < pairs; i++) {
-    messages.push({
-      id: i * 2,
-      role: "user",
-      content: SAMPLE_USER_MESSAGES[i % SAMPLE_USER_MESSAGES.length],
-    });
-    messages.push({
-      id: i * 2 + 1,
-      role: "assistant",
-      content: SAMPLE_ASSISTANT_RESPONSES[i % SAMPLE_ASSISTANT_RESPONSES.length],
-    });
-  }
-  
-  return messages;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
@@ -668,8 +335,6 @@ export class DemoPage extends LitElement {
       border-radius: 0.5rem;
       border: 1px solid #e2e8f0;
       overflow: auto;
-
-      /* Minimal scrollbar */
       isolation: isolate;
       scrollbar-color: #d0d7de transparent;
       scrollbar-gutter: stable;
@@ -694,8 +359,6 @@ export class DemoPage extends LitElement {
       border: 1px solid #e2e8f0;
       overflow: auto;
       padding: 1rem;
-
-      /* Minimal scrollbar */
       isolation: isolate;
       scrollbar-color: #d0d7de transparent;
       scrollbar-gutter: stable;
@@ -892,9 +555,7 @@ export class DemoPage extends LitElement {
   // ─────────────────────────────────────────────────────────────────────────────
 
   @state() private _scenario: Scenario = "streaming";
-  @state() private _text = sampleMarkdown;
   @state() private _isStreaming = false;
-  @state() private _charCount = sampleMarkdown.length;
   @state() private _isPaused = false;
   @state() private _speed = "normal";
   @state() private _latency = "heavy";
@@ -904,26 +565,21 @@ export class DemoPage extends LitElement {
   @state() private _initialLatencyEnabled = true;
   @state() private _controlsCollapsed = window.innerWidth < 640;
   
+  // Streaming scenario state
+  @state() private _text = getSampleMarkdown();
+  @state() private _charCount = getSampleMarkdown().length;
+  private _currentIndex = getSampleMarkdown().length;
+  
   // Chat scenario state
   @state() private _chatMessages: ChatMessage[] = [];
   @state() private _streamingMessageId: number | null = null;
-  @state() private _streamingContent = "";
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Element Queries
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  @query("markdown-viewer") private _viewer?: MarkdownViewer;
-  @query(".viewer-container") private _viewerContainer?: HTMLDivElement;
-  @query(".chat-container") private _chatContainer?: HTMLDivElement;
-  @query(".scroll-to-bottom") private _scrollButton?: HTMLButtonElement;
+  private _streamingContent = "";
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Private State
   // ─────────────────────────────────────────────────────────────────────────────
 
   private _streamingActive = false;
-  private _currentIndex = sampleMarkdown.length;
   private _lastContentHeight = 0;
   private _lastTouchY = 0;
   private _scrollButtonVisible = false;
@@ -934,7 +590,6 @@ export class DemoPage extends LitElement {
   // Presets
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // Speed presets: [charsPerTick, baseIntervalMs]
   private readonly _speedPresets: Record<string, [number, number]> = {
     "ultra-slow": [1, 150],
     "very-slow": [1, 80],
@@ -944,7 +599,6 @@ export class DemoPage extends LitElement {
     "very-fast": [25, 20],
   };
 
-  // Latency presets: [probability, minMs, maxMs]
   private readonly _latencyPresets: Record<string, [number, number, number]> = {
     none: [0, 0, 0],
     light: [0.05, 200, 500],
@@ -970,13 +624,9 @@ export class DemoPage extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-
-    // Initialize theme
     this._isDark = this._darkModeQuery.matches;
     this.classList.toggle("dark", this._isDark);
     this._darkModeQuery.addEventListener("change", this._handleThemeChange);
-
-    // Global keyboard handler
     document.addEventListener("keydown", this._handleKeyDown);
   }
 
@@ -989,7 +639,6 @@ export class DemoPage extends LitElement {
       this._animateScrollButton();
     }
     if (changedProperties.has("_scenario")) {
-      // Wait for DOM to be fully updated before setting up handlers
       await this.updateComplete;
       this._setupScrollHandlers();
     }
@@ -998,17 +647,14 @@ export class DemoPage extends LitElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this._stopStreaming();
-
     document.removeEventListener("keydown", this._handleKeyDown);
     this._darkModeQuery.removeEventListener("change", this._handleThemeChange);
-
     this._cleanupScrollHandlers();
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
   }
 
   private _setupScrollHandlers(): void {
-    // Cleanup previous handlers
     this._cleanupScrollHandlers();
     
     const container = this._getActiveContainer();
@@ -1019,15 +665,15 @@ export class DemoPage extends LitElement {
     container.addEventListener("touchmove", this._handleTouchMove, { passive: true });
     container.addEventListener("scroll", this._handleScroll, { passive: true });
 
-    // Content resize observer
     this._resizeObserver = new ResizeObserver(this._handleContentResize);
     this._resizeObserver.observe(container);
     this._lastContentHeight = container.scrollHeight;
   }
 
   private _cleanupScrollHandlers(): void {
-    const containers = [this._viewerContainer, this._chatContainer];
-    for (const container of containers) {
+    const selectors = [".viewer-container", ".chat-container"];
+    for (const selector of selectors) {
+      const container = this.shadowRoot?.querySelector(selector) as HTMLElement | null;
       if (container) {
         container.removeEventListener("wheel", this._handleWheel);
         container.removeEventListener("touchstart", this._handleTouchStart);
@@ -1039,13 +685,12 @@ export class DemoPage extends LitElement {
   }
 
   private _getActiveContainer(): HTMLDivElement | undefined {
-    // Query directly instead of using @query cache (handles conditional rendering)
     const selector = this._scenario === "streaming" ? ".viewer-container" : ".chat-container";
     return this.shadowRoot?.querySelector(selector) as HTMLDivElement | undefined;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Event Handlers (arrow functions for stable references)
+  // Event Handlers
   // ─────────────────────────────────────────────────────────────────────────────
 
   private _handleKeyDown = (e: KeyboardEvent): void => {
@@ -1057,38 +702,27 @@ export class DemoPage extends LitElement {
   };
 
   private _handleWheel = (e: WheelEvent): void => {
-    if (e.deltaY < 0) {
-      this._disableAutoScroll();
-    }
+    if (e.deltaY < 0) this._disableAutoScroll();
   };
 
   private _handleTouchStart = (e: TouchEvent): void => {
-    if (e.touches.length > 0) {
-      this._lastTouchY = e.touches[0].clientY;
-    }
+    if (e.touches.length > 0) this._lastTouchY = e.touches[0].clientY;
   };
 
   private _handleTouchMove = (e: TouchEvent): void => {
     if (e.touches.length > 0) {
-      const currentY = e.touches[0].clientY;
-      const deltaY = currentY - this._lastTouchY;
-
-      if (deltaY > 10) {
-        this._disableAutoScroll();
-      }
-
-      this._lastTouchY = currentY;
+      const deltaY = e.touches[0].clientY - this._lastTouchY;
+      if (deltaY > 10) this._disableAutoScroll();
+      this._lastTouchY = e.touches[0].clientY;
     }
   };
 
   private _handleScroll = (): void => {
     const container = this._getActiveContainer();
     if (!container) return;
-
     if (isAtBottom(container, 30) && !this._autoScrollEnabled) {
       this._autoScrollEnabled = true;
     }
-
     this._updateScrollButtonVisibility();
   };
 
@@ -1098,14 +732,11 @@ export class DemoPage extends LitElement {
 
     for (const entry of entries) {
       const newHeight = entry.contentRect.height;
-
       if (this._isStreaming && this._autoScrollEnabled && newHeight > this._lastContentHeight) {
         this._scrollToBottom();
       }
-
       this._lastContentHeight = newHeight;
     }
-
     this._updateScrollButtonVisibility();
   };
 
@@ -1115,27 +746,22 @@ export class DemoPage extends LitElement {
 
   private _scrollToBottom(): void {
     const container = this._getActiveContainer();
-    if (!container) return;
-
-    animateScrollToBottom(container, {
-      dynamicTarget: true,
-      afterDelay: 0,
-    });
+    if (container) {
+      animateScrollToBottom(container, { dynamicTarget: true, afterDelay: 0 });
+    }
   }
 
   private _disableAutoScroll(): void {
     this._autoScrollEnabled = false;
     const container = this._getActiveContainer();
-    if (container) {
-      cancelScrollAnimation(container);
-    }
+    if (container) cancelScrollAnimation(container);
   }
 
-  private _scrollToBottomAndEnable(): void {
+  private _scrollToBottomAndEnable = (): void => {
     this._autoScrollEnabled = true;
     this._showScrollButton = false;
     this._scrollToBottom();
-  }
+  };
 
   private _updateScrollButtonVisibility(): void {
     const container = this._getActiveContainer();
@@ -1150,29 +776,30 @@ export class DemoPage extends LitElement {
   }
 
   private _animateScrollButton(): void {
-    if (!this._scrollButton) return;
+    const button = this.shadowRoot?.querySelector(".scroll-to-bottom") as HTMLButtonElement | null;
+    if (!button) return;
 
     this._scrollButtonAnimation?.pause();
     this._scrollButtonAnimation = null;
 
     if (this._showScrollButton && !this._scrollButtonVisible) {
       this._scrollButtonVisible = true;
-      this._scrollButton.classList.add("visible");
-      this._scrollButtonAnimation = animate(this._scrollButton, {
+      button.classList.add("visible");
+      this._scrollButtonAnimation = animate(button, {
         opacity: [0, 1],
         translateY: ["1rem", "0rem"],
         duration: 250,
         ease: "outCubic",
       });
     } else if (!this._showScrollButton && this._scrollButtonVisible) {
-      this._scrollButtonAnimation = animate(this._scrollButton, {
+      this._scrollButtonAnimation = animate(button, {
         opacity: [1, 0],
         translateY: ["0rem", "1rem"],
         duration: 200,
         ease: "inCubic",
         onComplete: () => {
           this._scrollButtonVisible = false;
-          this._scrollButton?.classList.remove("visible");
+          button.classList.remove("visible");
         },
       });
     }
@@ -1181,6 +808,10 @@ export class DemoPage extends LitElement {
   // ─────────────────────────────────────────────────────────────────────────────
   // Scenario Switching
   // ─────────────────────────────────────────────────────────────────────────────
+
+  private _handleScenarioChange = (e: Event): void => {
+    this._switchScenario((e.target as HTMLSelectElement).value as Scenario);
+  };
 
   private _switchScenario(scenario: Scenario): void {
     if (this._scenario === scenario) return;
@@ -1191,29 +822,33 @@ export class DemoPage extends LitElement {
     this._autoScrollEnabled = true;
     
     if (scenario === "chat") {
-      // Pre-load 50 messages when switching to chat
-      this._chatMessages = generateChatMessages(50);
-      this._charCount = this._chatMessages.reduce((sum, m) => sum + m.content.length, 0);
+      const state = getInitialChatState();
+      this._chatMessages = state.messages;
+      this._charCount = state.charCount;
       this._streamingMessageId = null;
       this._streamingContent = "";
     } else {
-      this._text = sampleMarkdown;
-      this._charCount = sampleMarkdown.length;
-      this._currentIndex = sampleMarkdown.length;
+      const state = getInitialStreamingState();
+      this._text = state.text;
+      this._charCount = state.charCount;
+      this._currentIndex = state.currentIndex;
     }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Streaming (Single Viewer Scenario)
+  // Streaming Scenario Methods
   // ─────────────────────────────────────────────────────────────────────────────
 
-  private async _startStreaming(): Promise<void> {
+  private _startStreaming = async (): Promise<void> => {
     if (this._streamingActive) return;
 
-    this._viewer?.reset();
-    this._text = "";
-    this._currentIndex = 0;
-    this._charCount = 0;
+    const viewer = this.shadowRoot?.querySelector("markdown-viewer") as MarkdownViewer | null;
+    viewer?.reset();
+    
+    const state = getEmptyStreamingState();
+    this._text = state.text;
+    this._charCount = state.charCount;
+    this._currentIndex = state.currentIndex;
     this._isStreaming = true;
     this._streamingActive = true;
     this._autoScrollEnabled = true;
@@ -1226,6 +861,7 @@ export class DemoPage extends LitElement {
       if (!this._streamingActive) return;
     }
 
+    const sampleMarkdown = getSampleMarkdown();
     const [charsPerTick, baseInterval] = this._speedPresets[this._speed];
     const [latencyProb, latencyMin, latencyMax] = this._latencyPresets[this._latency];
 
@@ -1243,46 +879,40 @@ export class DemoPage extends LitElement {
       this._charCount = endIndex;
       this._currentIndex = endIndex;
 
-      if (this._autoScrollEnabled) {
-        this._scrollToBottom();
-      }
-
+      if (this._autoScrollEnabled) this._scrollToBottom();
       await this._delay(baseInterval);
     }
 
     this._stopStreaming();
-  }
+  };
 
-  private _stopStreaming(): void {
-    this._streamingActive = false;
-    this._isStreaming = false;
-    this._isPaused = false;
-    this._streamingMessageId = null;
-  }
-
-  private _loadInstant(): void {
+  private _loadInstant = (): void => {
     this._stopStreaming();
-    this._viewer?.reset();
-    this._text = sampleMarkdown;
-    this._charCount = sampleMarkdown.length;
-    this._currentIndex = sampleMarkdown.length;
-  }
+    const viewer = this.shadowRoot?.querySelector("markdown-viewer") as MarkdownViewer | null;
+    viewer?.reset();
+    const state = getFullStreamingState();
+    this._text = state.text;
+    this._charCount = state.charCount;
+    this._currentIndex = state.currentIndex;
+  };
 
-  private _clear(): void {
+  private _clearStreaming = (): void => {
     this._stopStreaming();
-    this._viewer?.reset();
-    this._text = "";
-    this._charCount = 0;
-    this._currentIndex = 0;
+    const viewer = this.shadowRoot?.querySelector("markdown-viewer") as MarkdownViewer | null;
+    viewer?.reset();
+    const state = getEmptyStreamingState();
+    this._text = state.text;
+    this._charCount = state.charCount;
+    this._currentIndex = state.currentIndex;
     this._lastContentHeight = 0;
     this._showScrollButton = false;
-  }
+  };
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Chat Scenario
+  // Chat Scenario Methods
   // ─────────────────────────────────────────────────────────────────────────────
 
-  private async _startChatSimulation(): Promise<void> {
+  private _startChatSimulation = async (): Promise<void> => {
     if (this._streamingActive) return;
 
     this._chatMessages = [];
@@ -1299,17 +929,14 @@ export class DemoPage extends LitElement {
       if (!this._streamingActive) break;
 
       if (message.role === "user") {
-        // User messages appear instantly
         this._chatMessages = [...this._chatMessages, message];
         this._charCount += message.content.length;
         await this._delay(300);
       } else {
-        // Assistant messages stream character by character
         this._streamingMessageId = message.id;
         this._streamingContent = "";
         this._chatMessages = [...this._chatMessages, { ...message, content: "" }];
 
-        // Initial latency before assistant starts responding
         if (this._initialLatencyEnabled) {
           this._isPaused = true;
           await this._delay(1000 + Math.random() * 1000);
@@ -1319,7 +946,6 @@ export class DemoPage extends LitElement {
 
         let currentIndex = 0;
         while (this._streamingActive && currentIndex < message.content.length) {
-          // Simulate network latency
           if (latencyProb > 0 && Math.random() < latencyProb) {
             const latencyMs = latencyMin + Math.random() * (latencyMax - latencyMin);
             this._isPaused = true;
@@ -1331,7 +957,6 @@ export class DemoPage extends LitElement {
           const endIndex = Math.min(currentIndex + charsPerTick, message.content.length);
           this._streamingContent = message.content.slice(0, endIndex);
           
-          // Update the message in the array
           this._chatMessages = this._chatMessages.map(m =>
             m.id === message.id ? { ...m, content: this._streamingContent } : m
           );
@@ -1339,10 +964,7 @@ export class DemoPage extends LitElement {
           this._charCount += endIndex - currentIndex;
           currentIndex = endIndex;
 
-          if (this._autoScrollEnabled) {
-            this._scrollToBottom();
-          }
-
+          if (this._autoScrollEnabled) this._scrollToBottom();
           await this._delay(baseInterval);
         }
 
@@ -1352,189 +974,59 @@ export class DemoPage extends LitElement {
     }
 
     this._stopStreaming();
-  }
+  };
 
-  private _loadChatInstant(): void {
+  private _reloadChat = (): void => {
     this._stopStreaming();
-    this._chatMessages = generateChatMessages(50);
-    this._charCount = this._chatMessages.reduce((sum, m) => sum + m.content.length, 0);
+    const state = getInitialChatState();
+    this._chatMessages = state.messages;
+    this._charCount = state.charCount;
     this._streamingMessageId = null;
-  }
+  };
 
-  private _clearChat(): void {
+  private _clearChat = (): void => {
     this._stopStreaming();
-    this._chatMessages = [];
-    this._charCount = 0;
+    const state = getEmptyChatState();
+    this._chatMessages = state.messages;
+    this._charCount = state.charCount;
     this._streamingMessageId = null;
     this._showScrollButton = false;
-  }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Common Methods
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  private _stopStreaming = (): void => {
+    this._streamingActive = false;
+    this._isStreaming = false;
+    this._isPaused = false;
+    this._streamingMessageId = null;
+  };
 
   private _delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // UI Event Handlers
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  private _handleScenarioChange(e: Event): void {
-    const scenario = (e.target as HTMLSelectElement).value as Scenario;
-    this._switchScenario(scenario);
-  }
-
-  private _handleSpeedChange(e: Event): void {
+  private _handleSpeedChange = (e: Event): void => {
     this._speed = (e.target as HTMLSelectElement).value;
-  }
+  };
 
-  private _handleLatencyChange(e: Event): void {
+  private _handleLatencyChange = (e: Event): void => {
     this._latency = (e.target as HTMLSelectElement).value;
-  }
+  };
 
-  private _handleInitialLatencyChange(e: Event): void {
+  private _handleInitialLatencyChange = (e: Event): void => {
     this._initialLatencyEnabled = (e.target as HTMLInputElement).checked;
-  }
+  };
 
-  private _toggleControls(): void {
+  private _toggleControls = (): void => {
     this._controlsCollapsed = !this._controlsCollapsed;
-  }
+  };
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────────────────────────────────────────
-
-  override render() {
-    const streamingStatus = this._isPaused
-      ? "Paused (latency)"
-      : this._isStreaming
-        ? "Streaming..."
-        : "Idle";
-
-    return html`
-      <div class="container">
-        <header>
-          <h1>Markdown Viewer Demo</h1>
-          <p class="subtitle">
-            Lit Web Component for rendering markdown with streaming support
-          </p>
-        </header>
-
-        <div class="scenario-selector">
-          <label for="scenario">Scenario:</label>
-          <select
-            id="scenario"
-            @change=${this._handleScenarioChange}
-            ?disabled=${this._isStreaming}
-          >
-            <option value="streaming" ?selected=${this._scenario === 'streaming'}>
-              📄 Single Document Streaming
-            </option>
-            <option value="chat" ?selected=${this._scenario === 'chat'}>
-              💬 AI Chat (50 messages)
-            </option>
-          </select>
-        </div>
-
-        ${this._scenario === 'streaming' ? this._renderStreamingControls() : this._renderChatControls()}
-
-        <div class="status-bar">
-          <div class="status-item">
-            <span class="status-label">Status:</span>
-            <span class="status-value ${this._isPaused ? 'paused' : this._isStreaming ? 'streaming' : 'idle'}">
-              ${streamingStatus}
-            </span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">Characters:</span>
-            <span class="status-value">${this._charCount.toLocaleString()}</span>
-          </div>
-          ${this._scenario === 'chat' ? html`
-            <div class="status-item">
-              <span class="status-label">Messages:</span>
-              <span class="status-value">${this._chatMessages.length}</span>
-            </div>
-          ` : html`
-            <div class="status-item">
-              <span class="status-label">Progress:</span>
-              <span class="status-value">${Math.round((this._charCount / sampleMarkdown.length) * 100)}%</span>
-            </div>
-          `}
-        </div>
-
-        <div class="viewer-wrapper">
-          ${this._scenario === 'streaming' ? this._renderStreamingViewer() : this._renderChatViewer()}
-          <button
-            class="scroll-to-bottom"
-            @click=${this._scrollToBottomAndEnable}
-            title="Scroll to bottom"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
-  private _renderStreamingControls() {
-    return html`
-      <div class="controls ${this._controlsCollapsed ? 'collapsed' : ''}">
-        <div class="controls-header" @click=${this._toggleControls}>
-          <span>Controls</span>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m6 9 6 6 6-6"/>
-          </svg>
-        </div>
-        <div class="controls-content">
-          <div class="controls-row">
-            <button class="btn-primary" @click=${this._startStreaming} ?disabled=${this._isStreaming}>
-              Start Streaming
-            </button>
-            <button class="btn-secondary" @click=${this._stopStreaming} ?disabled=${!this._isStreaming}>
-              Stop
-            </button>
-            <button class="btn-secondary" @click=${this._loadInstant} ?disabled=${this._isStreaming}>
-              Load Instant
-            </button>
-            <button class="btn-danger" @click=${this._clear} ?disabled=${this._isStreaming}>
-              Clear
-            </button>
-          </div>
-          ${this._renderCommonControls()}
-        </div>
-      </div>
-    `;
-  }
-
-  private _renderChatControls() {
-    return html`
-      <div class="controls ${this._controlsCollapsed ? 'collapsed' : ''}">
-        <div class="controls-header" @click=${this._toggleControls}>
-          <span>Controls</span>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m6 9 6 6 6-6"/>
-          </svg>
-        </div>
-        <div class="controls-content">
-          <div class="controls-row">
-            <button class="btn-primary" @click=${this._startChatSimulation} ?disabled=${this._isStreaming}>
-              Stream New Chat
-            </button>
-            <button class="btn-secondary" @click=${this._stopStreaming} ?disabled=${!this._isStreaming}>
-              Stop
-            </button>
-            <button class="btn-secondary" @click=${this._loadChatInstant} ?disabled=${this._isStreaming}>
-              Reload
-            </button>
-            <button class="btn-danger" @click=${this._clearChat} ?disabled=${this._isStreaming}>
-              Clear
-            </button>
-          </div>
-          ${this._renderCommonControls()}
-        </div>
-      </div>
-    `;
-  }
 
   private _renderCommonControls() {
     return html`
@@ -1574,42 +1066,96 @@ export class DemoPage extends LitElement {
     `;
   }
 
-  private _renderStreamingViewer() {
-    return html`
-      <div class="viewer-container">
-        <markdown-viewer
-          .text=${this._text}
-          ?is-streaming=${this._isStreaming}
-          throttle-ms="50"
-          class=${this._isDark ? "dark" : ""}
-        ></markdown-viewer>
-      </div>
-    `;
-  }
+  override render() {
+    const streamingStatus = this._isPaused
+      ? "Paused (latency)"
+      : this._isStreaming
+        ? "Streaming..."
+        : "Idle";
 
-  private _renderChatViewer() {
     return html`
-      <div class="chat-container">
-        <div class="chat-messages">
-          ${repeat(
-            this._chatMessages,
-            (msg) => msg.id,
-            (msg) => html`
-              <div class="chat-message ${msg.role}">
-                <div class="chat-avatar">
-                  ${msg.role === 'user' ? 'U' : 'AI'}
-                </div>
-                <div class="chat-bubble">
-                  <markdown-viewer
-                    .text=${msg.content}
-                    ?is-streaming=${this._streamingMessageId === msg.id}
-                    throttle-ms="50"
-                    class=${this._isDark ? "dark" : ""}
-                  ></markdown-viewer>
-                </div>
-              </div>
-            `
-          )}
+      <div class="container">
+        <header>
+          <h1>Markdown Viewer Demo</h1>
+          <p class="subtitle">
+            Lit Web Component for rendering markdown with streaming support
+          </p>
+        </header>
+
+        <div class="scenario-selector">
+          <label for="scenario">Scenario:</label>
+          <select id="scenario" @change=${this._handleScenarioChange} ?disabled=${this._isStreaming}>
+            <option value="streaming" ?selected=${this._scenario === 'streaming'}>
+              📄 Single Document Streaming
+            </option>
+            <option value="chat" ?selected=${this._scenario === 'chat'}>
+              💬 AI Chat (50 messages)
+            </option>
+          </select>
+        </div>
+
+        ${this._scenario === 'streaming' 
+          ? renderStreamingControls({
+              isStreaming: this._isStreaming,
+              controlsCollapsed: this._controlsCollapsed,
+              onStart: this._startStreaming,
+              onStop: this._stopStreaming,
+              onLoadInstant: this._loadInstant,
+              onClear: this._clearStreaming,
+              onToggleControls: this._toggleControls,
+              commonControls: this._renderCommonControls(),
+            })
+          : renderChatControls({
+              isStreaming: this._isStreaming,
+              controlsCollapsed: this._controlsCollapsed,
+              onStart: this._startChatSimulation,
+              onStop: this._stopStreaming,
+              onReload: this._reloadChat,
+              onClear: this._clearChat,
+              onToggleControls: this._toggleControls,
+              commonControls: this._renderCommonControls(),
+            })
+        }
+
+        <div class="status-bar">
+          <div class="status-item">
+            <span class="status-label">Status:</span>
+            <span class="status-value ${this._isPaused ? 'paused' : this._isStreaming ? 'streaming' : 'idle'}">
+              ${streamingStatus}
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Characters:</span>
+            <span class="status-value">${this._charCount.toLocaleString()}</span>
+          </div>
+          ${this._scenario === 'chat' 
+            ? renderChatStatus({ messageCount: this._chatMessages.length })
+            : renderStreamingStatus({ charCount: this._charCount, totalChars: getSampleMarkdown().length })
+          }
+        </div>
+
+        <div class="viewer-wrapper">
+          ${this._scenario === 'streaming'
+            ? renderStreamingViewer({
+                text: this._text,
+                isStreaming: this._isStreaming,
+                isDark: this._isDark,
+              })
+            : renderChatViewer({
+                messages: this._chatMessages,
+                streamingMessageId: this._streamingMessageId,
+                isDark: this._isDark,
+              })
+          }
+          <button
+            class="scroll-to-bottom"
+            @click=${this._scrollToBottomAndEnable}
+            title="Scroll to bottom"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
         </div>
       </div>
     `;
