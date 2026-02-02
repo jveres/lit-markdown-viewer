@@ -1,7 +1,8 @@
 # Performance Improvement Strategy
 
 > Last updated: 2026-02-02
-> Phase 1 optimizations complete (adaptive throttling + KaTeX lazy loading)
+> Phase 1 complete (adaptive throttling + KaTeX lazy loading)
+> Phase 2 complete (element-level morph optimization: 99% skip rate)
 
 ## Current Baseline
 
@@ -164,17 +165,18 @@ npm run bench:browser  # Morph baseline
 
 ### Key Metrics to Track
 
-| Metric | Target | Baseline | After Optimizations |
-|--------|--------|----------|---------------------|
-| Parse (medium) | <0.3ms | 0.39ms | 0.39ms |
-| Parse (large) | <1.5ms | 1.70ms | 1.70ms |
-| KaTeX (medium) | <0.5ms | 0.64ms | 0.64ms |
-| Morph (medium) | <0.15ms | 0.21ms | 0.21ms |
-| Morph (large) | <0.5ms | 0.81ms | 0.81ms |
-| Streaming (20 morphs) | <4ms | 5.35ms | 5.35ms |
-| Max spike (normal CPU) | <25ms | 35ms | 22ms ✅ |
-| Max spike (6x throttle) | <200ms | N/A | 157ms ✅ |
-| Initial bundle (gzip) | <450KB | 507KB | 430KB ✅ |
+| Metric | Target | Baseline | After Phase 1 | After Phase 2 |
+|--------|--------|----------|---------------|---------------|
+| Parse (medium) | <0.3ms | 0.39ms | 0.39ms | 0.39ms |
+| Parse (large) | <1.5ms | 1.70ms | 1.70ms | 1.70ms |
+| KaTeX (medium) | <0.5ms | 0.64ms | 0.64ms | 0.64ms |
+| Morph (medium) | <0.15ms | 0.21ms | 0.21ms | 0.21ms |
+| Morph (large) | <0.5ms | 0.81ms | 0.81ms | 0.81ms |
+| Streaming avg morph | <15ms | N/A | 35.9ms | 12.9ms ✅ |
+| Skip rate (streaming) | >90% | 0% | 0% | 99.3% ✅ |
+| Max spike (normal CPU) | <25ms | 35ms | 22ms ✅ | 22ms ✅ |
+| Max spike (6x throttle) | <200ms | N/A | 157ms | 122ms ✅ |
+| Initial bundle (gzip) | <450KB | 507KB | 430KB ✅ | 430KB ✅ |
 
 ---
 
@@ -186,8 +188,8 @@ npm run bench:browser  # Morph baseline
 - [x] 1.3 Debounce at end of stream ✅ - superseded by adaptive throttling
 
 ### Phase 2: Core Optimizations
-- [ ] 2.1 Incremental parsing
-- [ ] 2.2 Subtree morph targeting
+- [ ] 2.1 Incremental parsing (deferred - complexity vs gain)
+- [x] 2.2 Element-level morph optimization ✅ (2026-02-02)
 
 ### Phase 3: Advanced (if needed)
 - [ ] 2.3 Virtual scrolling
@@ -230,6 +232,31 @@ npm run bench:browser  # Morph baseline
   - Shows styled placeholder while loading (~200ms)
   - Re-renders automatically when KaTeX ready
   - Clears render cache to ensure fresh output
+
+### Element-Level Morph Optimization (2026-02-02)
+- **Implementation:** Hash top-level HTML elements, skip unchanged during morph
+- **New API:** `morphContentOptimized()` with `getMorphStats()`
+- **Algorithm:**
+  1. Hash each top-level element (tagName + outerHTML via djb2)
+  2. Compare old vs new element hashes
+  3. Skip identical elements, morph changed ones, append new
+- **Results (6x CPU throttle, 24KB content, 148 blocks):**
+  - Stream duration: 49.6s
+  - Total morphs: 1,793
+  - Avg morph: 12.9ms
+  - Min morph: 2.0ms  
+  - Max morph: 122.5ms
+  - **Skip rate: 99.3%** (147/148 blocks skipped)
+- **Pattern observed:**
+  - "1 updated, X skipped, Y added" throughout streaming
+  - Only active streaming block gets morphed
+  - Completed blocks are skipped by hash comparison
+  - New blocks appended directly (no morph overhead)
+- **Scaling:**
+  - Early (<20 blocks): 5-11ms
+  - Mid (20-70 blocks): 10-20ms
+  - Late (70-148 blocks): 20-40ms typical
+- **Dev logging:** `🔄 Morph: X updated, Y skipped, Z added`
 
 ### [Future entries will be added here]
 

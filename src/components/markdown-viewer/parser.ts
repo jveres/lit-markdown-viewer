@@ -6,9 +6,12 @@ import { cacheManager } from './cache-manager';
 // Lazy KaTeX Loading
 // --------------------------------------------------------------------------
 
-type KaTeXModule = typeof import('katex');
-let katexModule: KaTeXModule | null = null;
-let katexLoadPromise: Promise<KaTeXModule> | null = null;
+interface KaTeXLike {
+  renderToString: (tex: string, options?: object) => string;
+}
+
+let katexModule: KaTeXLike | null = null;
+let katexLoadPromise: Promise<KaTeXLike> | null = null;
 
 /**
  * Preload KaTeX module (non-blocking)
@@ -19,8 +22,9 @@ export function preloadKaTeX(): Promise<void> {
   if (!katexLoadPromise) {
     katexLoadPromise = import('katex').then((mod) => {
       // KaTeX exports renderToString both directly and on default
-      katexModule = mod.default || mod;
-      return katexModule;
+      const katex = (mod.default || mod) as KaTeXLike;
+      katexModule = katex;
+      return katex;
     });
   }
   return katexLoadPromise.then(() => {});
