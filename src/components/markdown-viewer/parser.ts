@@ -91,7 +91,7 @@ export function renderMarkdown(
       ignoreSetext: true
     },
     render: {
-      unsafe: true,
+      unsafe: false,
       escape: false,
       hardbreaks: false,
       tasklistClasses: true,
