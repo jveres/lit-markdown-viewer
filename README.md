@@ -374,21 +374,24 @@ npm run test:component:watch # Component tests
 Run tests with coverage:
 
 ```bash
-npm run test:coverage
+npm run test:coverage            # Unit tests (v8)
+npm run test:component:coverage  # Component tests (istanbul)
 ```
 
 ### Test Structure
 
 ```
 tests/
-├── unit/                        # Node environment
-│   ├── cache-manager.test.ts    # LRU cache tests
-│   ├── cursor-controller.test.ts # Cursor blink state tests
-│   ├── parser.test.ts           # Markdown rendering tests
-│   ├── animate-scroll.test.ts   # Scroll utility tests
-│   └── utils.test.ts            # HTML decode tests
-└── component/                   # Browser environment (Playwright)
-    └── markdown-viewer.test.ts  # Component rendering, streaming, focus tests
+├── unit/                          # Node environment (119 tests)
+│   ├── cache-manager.test.ts      # LRU cache tests
+│   ├── cursor-controller.test.ts  # Cursor blink state tests
+│   ├── parser.test.ts             # Markdown rendering tests
+│   ├── animate-scroll.test.ts     # Scroll utility tests
+│   └── utils.test.ts              # HTML decode tests
+└── component/                     # Browser environment - Playwright (60 tests)
+    ├── markdown-viewer.test.ts    # Component rendering, streaming, focus
+    ├── morph.test.ts              # DOM morphing, hash skip, data-morph-ignore
+    └── animate-scroll.test.ts     # Scroll animations, RAF, cancellation
 ```
 
 ## Browser Support
