@@ -237,24 +237,28 @@ describe('CacheManager', () => {
         cacheManager.renderCacheSync.set(`sync${i}`, mediumString);
       }
       // Fill renderCacheAsync (2.5MB limit)
-      for (let i = 0; i < 25; i++) {
+      for (let i = 0; i < 20; i++) {
         cacheManager.renderCacheAsync.set(`async${i}`, mediumString);
       }
-      // Fill katexCacheDisplay (2MB limit)
-      for (let i = 0; i < 20; i++) {
+      // Fill katexCacheDisplay (1.5MB limit)
+      for (let i = 0; i < 15; i++) {
         cacheManager.katexCacheDisplay.set(`display${i}`, mediumString);
       }
-      // Fill katexCacheInline (2MB limit)
-      for (let i = 0; i < 20; i++) {
+      // Fill katexCacheInline (1.5MB limit)
+      for (let i = 0; i < 15; i++) {
         cacheManager.katexCacheInline.set(`inline${i}`, mediumString);
       }
       // Fill morphCache (1MB limit, 10 entry limit)
       for (let i = 0; i < 10; i++) {
         cacheManager.morphCache.set(`morph${i}`, mediumString);
       }
+      // Fill blockRenderCache (2MB limit)
+      for (let i = 0; i < 20; i++) {
+        cacheManager.blockRenderCache.set(`block${i}`, mediumString);
+      }
       
       const beforeStats = cacheManager.stats;
-      // Should be at ~9.5MB (close to 10MB total budget)
+      // Should be at ~9MB+ (close to 10MB total budget)
       expect(beforeStats.total.estimatedBytes).toBeGreaterThan(9 * 1024 * 1024);
       
       const beforeTrim = beforeStats.total.entries;

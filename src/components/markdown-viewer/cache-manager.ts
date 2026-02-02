@@ -118,27 +118,31 @@ class CacheManager {
   readonly katexCacheDisplay: LRUCache<string>;
   readonly katexCacheInline: LRUCache<string>;
   readonly morphCache: LRUCache<string>;
+  // Block-level render cache for AST block diffing
+  readonly blockRenderCache: LRUCache<string>;
 
   constructor(memoryBudget = DEFAULT_MEMORY_BUDGET) {
     this.memoryBudget = memoryBudget;
 
-    // Allocate budget: 25% render sync, 25% render async, 20% katex display, 20% katex inline, 10% morph
-    this.renderCacheSync = new LRUCache<string>(100, memoryBudget * 0.25);
-    this.renderCacheAsync = new LRUCache<string>(100, memoryBudget * 0.25);
-    this.katexCacheDisplay = new LRUCache<string>(250, memoryBudget * 0.2);
-    this.katexCacheInline = new LRUCache<string>(250, memoryBudget * 0.2);
+    // Allocate budget: 20% render sync, 20% render async, 15% katex display, 15% katex inline, 10% morph, 20% block
+    this.renderCacheSync = new LRUCache<string>(100, memoryBudget * 0.2);
+    this.renderCacheAsync = new LRUCache<string>(100, memoryBudget * 0.2);
+    this.katexCacheDisplay = new LRUCache<string>(250, memoryBudget * 0.15);
+    this.katexCacheInline = new LRUCache<string>(250, memoryBudget * 0.15);
     this.morphCache = new LRUCache<string>(10, memoryBudget * 0.1);
+    this.blockRenderCache = new LRUCache<string>(500, memoryBudget * 0.2);
   }
 
   /**
    * Get combined stats for all caches
    */
-  get stats(): { renderSync: CacheStats; renderAsync: CacheStats; katexDisplay: CacheStats; katexInline: CacheStats; morph: CacheStats; total: CacheStats } {
+  get stats(): { renderSync: CacheStats; renderAsync: CacheStats; katexDisplay: CacheStats; katexInline: CacheStats; morph: CacheStats; blockRender: CacheStats; total: CacheStats } {
     const renderSync = this.renderCacheSync.stats;
     const renderAsync = this.renderCacheAsync.stats;
     const katexDisplay = this.katexCacheDisplay.stats;
     const katexInline = this.katexCacheInline.stats;
     const morph = this.morphCache.stats;
+    const blockRender = this.blockRenderCache.stats;
 
     return {
       renderSync,
@@ -146,9 +150,10 @@ class CacheManager {
       katexDisplay,
       katexInline,
       morph,
+      blockRender,
       total: {
-        entries: renderSync.entries + renderAsync.entries + katexDisplay.entries + katexInline.entries + morph.entries,
-        estimatedBytes: renderSync.estimatedBytes + renderAsync.estimatedBytes + katexDisplay.estimatedBytes + katexInline.estimatedBytes + morph.estimatedBytes
+        entries: renderSync.entries + renderAsync.entries + katexDisplay.entries + katexInline.entries + morph.entries + blockRender.entries,
+        estimatedBytes: renderSync.estimatedBytes + renderAsync.estimatedBytes + katexDisplay.estimatedBytes + katexInline.estimatedBytes + morph.estimatedBytes + blockRender.estimatedBytes
       }
     };
   }
@@ -162,6 +167,7 @@ class CacheManager {
     this.katexCacheDisplay.clear();
     this.katexCacheInline.clear();
     this.morphCache.clear();
+    this.blockRenderCache.clear();
   }
 
   /**
@@ -178,7 +184,8 @@ class CacheManager {
         this.renderCacheAsync,
         this.katexCacheDisplay,
         this.katexCacheInline,
-        this.morphCache
+        this.morphCache,
+        this.blockRenderCache
       ];
 
       for (const cache of caches) {

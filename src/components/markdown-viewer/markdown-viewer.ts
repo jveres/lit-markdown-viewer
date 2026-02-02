@@ -3,7 +3,7 @@ import { customElement, property, state, query } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
 import { CURSOR_MARKER, renderMarkdown, preloadKaTeX, isKaTeXReady } from './parser';
-import { morphContent, morphContentSync, resetMorphCache } from './morph';
+import { morphContent, morphContentOptimized, getMorphStats, resetMorphCache } from './morph';
 import { createCursorController, type CursorController } from './cursor-controller';
 import { cacheManager } from './cache-manager';
 import { createPerfLogger } from '../../utils/perf';
@@ -181,13 +181,21 @@ export class MarkdownViewer extends LitElement {
     // Apply DOM morphing for sync strategy
     if (this._useSyncStrategy && this._containerRef) {
       if (this.isStreaming) {
-        // Use sync morph during streaming so cursor is immediately available
+        // Use optimized morph during streaming - skips unchanged elements
         // Track duration for adaptive throttling and stats
         const startTime = performance.now();
-        perf.measure('morph', () => morphContentSync(this._containerRef!, this._renderedContent), 5);
+        perf.measure('morph', () => morphContentOptimized(this._containerRef!, this._renderedContent), 5);
         this._lastMorphDuration = performance.now() - startTime;
         this._adjustAdaptiveThrottle();
         this._trackMorphStats();
+        
+        // Log morph stats in dev mode
+        if (import.meta.env.DEV) {
+          const stats = getMorphStats();
+          if (stats.skipped > 0) {
+            console.log(`🔄 Morph: ${stats.updated} updated, ${stats.skipped} skipped, ${stats.added} added`);
+          }
+        }
 
         // Initialize cursor controller if not yet created
         if (!this._cursorController) {
