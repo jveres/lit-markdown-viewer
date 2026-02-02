@@ -143,6 +143,16 @@ describe('parser', () => {
         expect(result).toContain('color-box');
       });
 
+      it('should add color preview for 4-digit hex (with alpha)', () => {
+        const result = renderMarkdown('`#f00f`', false);
+        expect(result).toContain('color-box');
+      });
+
+      it('should add color preview for 8-digit hex (with alpha)', () => {
+        const result = renderMarkdown('`#ff0000ff`', false);
+        expect(result).toContain('color-box');
+      });
+
       it('should add color preview for rgb colors', () => {
         const result = renderMarkdown('`rgb(255, 0, 0)`', false);
         expect(result).toContain('color-box');
@@ -158,9 +168,29 @@ describe('parser', () => {
         expect(result).toContain('color-box');
       });
 
-      it('should not add color preview for invalid hex lengths', () => {
+      it('should add color preview for hsla colors', () => {
+        const result = renderMarkdown('`hsla(0, 100%, 50%, 0.5)`', false);
+        expect(result).toContain('color-box');
+      });
+
+      it('should not add color preview for invalid hex lengths (2 chars)', () => {
         const result = renderMarkdown('`#ff`', false);
         expect(result).not.toContain('color-box');
+      });
+
+      it('should not add color preview for invalid hex lengths (5 chars)', () => {
+        const result = renderMarkdown('`#fffff`', false);
+        expect(result).not.toContain('color-box');
+      });
+
+      it('should not add color preview for invalid hex lengths (7 chars)', () => {
+        const result = renderMarkdown('`#fffffff`', false);
+        expect(result).not.toContain('color-box');
+      });
+
+      it('should add color preview in fenced code blocks', () => {
+        const result = renderMarkdown('```\n#ff0000\n```', false);
+        expect(result).toContain('color-box');
       });
     });
 
@@ -179,6 +209,52 @@ describe('parser', () => {
         const result = renderMarkdown('$\\frac{a}{b}$', false);
         expect(result).toContain('katex');
         expect(result).toContain('frac');
+      });
+
+      it('should cache KaTeX output and return cached result', () => {
+        // First render to populate cache
+        const result1 = renderMarkdown('$y^3$', false);
+        expect(result1).toContain('katex');
+        
+        // Second render should use cache (same result)
+        const result2 = renderMarkdown('$y^3$', false);
+        expect(result2).toContain('katex');
+        expect(result2).toBe(result1);
+      });
+
+      it('should handle math with cursor marker during streaming', () => {
+        // Math with cursor marker - simulates streaming
+        const mathWithCursor = `$x^2${CURSOR_MARKER}$`;
+        const result = renderMarkdown(mathWithCursor, true);
+        
+        // Should contain KaTeX output
+        expect(result).toContain('katex');
+      });
+
+      it('should return cached math with cursor marker appended', () => {
+        // First, render math without cursor to cache it
+        const mathOnly = '$z^4$';
+        renderMarkdown(mathOnly, false);
+        
+        // Now render same math with cursor - should use cache and append cursor
+        const mathWithCursor = `$z^4${CURSOR_MARKER}$`;
+        const result = renderMarkdown(mathWithCursor, true);
+        
+        expect(result).toContain('katex');
+        expect(result).toContain(CURSOR_HTML);
+      });
+
+      it('should handle invalid math gracefully', () => {
+        // This should not throw, KaTeX is configured with throwOnError: false
+        const result = renderMarkdown('$\\invalid{$', false);
+        // Should return something (either rendered or original)
+        expect(result).toBeTruthy();
+      });
+
+      it('should handle severely malformed math', () => {
+        // Unclosed braces and invalid commands
+        const result = renderMarkdown('$\\frac{{{$', false);
+        expect(result).toBeTruthy();
       });
     });
 
