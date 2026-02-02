@@ -139,7 +139,13 @@ export class MarkdownViewer extends LitElement {
         }
 
         // Update cursor state AFTER morph (so the cursor element exists)
-        this._cursorController.update(this._containerRef);
+        // When text is empty, start blinking immediately (waiting state)
+        // Otherwise use normal update flow (solid while typing, blink after idle)
+        if (!this._throttledText) {
+          this._cursorController.setBlinking(this._containerRef, true);
+        } else {
+          this._cursorController.update(this._containerRef);
+        }
       } else {
         // Use async morph (RAF) for non-streaming updates to prevent jank
         morphContent(this._containerRef, this._renderedContent);

@@ -14,14 +14,14 @@ export function createCursorController(options: CursorBlinkOptions = {}) {
   const config = { ...DEFAULT_OPTIONS, ...options };
 
   // Time to wait after typing stops before blinking resumes.
-  // Set to 500ms to prevent flickering between keystrokes.
   const IDLE_TIMEOUT_MS = 500;
 
   let activeTimer: number | null = null;
-  let isBlinkAlt = false; // Tracks toggle state in memory to avoid DOM reads
+  let isBlinkAlt = false;
   let currentContainer: HTMLElement | null = null;
 
-  const initConfig = (el: HTMLElement) => {
+  // Initialize CSS variables on container
+  const initConfig = (el: HTMLElement): void => {
     el.style.setProperty('--cursor-blink-name', 'cursor-blink');
     el.style.setProperty(
       '--cursor-blink-duration',
@@ -30,35 +30,44 @@ export function createCursorController(options: CursorBlinkOptions = {}) {
     el.style.setProperty('--cursor-blink-delay', `${config.blinkDelay.toFixed(2)}s`);
   };
 
-  // Forces the CSS animation to restart at 0% (visible)
+  // Ensure container is initialized, returns cursor element if found
+  const ensureInit = (container: HTMLElement): HTMLElement | null => {
+    if (container !== currentContainer) {
+      currentContainer = container;
+      initConfig(container);
+    }
+    return container.querySelector('#cursor');
+  };
+
+  // Clear active timer if exists
+  const clearTimer = (): void => {
+    if (activeTimer) {
+      clearTimeout(activeTimer);
+      activeTimer = null;
+    }
+  };
+
+  // Toggle animation name to restart CSS animation at 0%
   const resetBlinkAnimation = (el: HTMLElement): void => {
     isBlinkAlt = !isBlinkAlt;
     el.style.setProperty('--cursor-blink-name', isBlinkAlt ? 'cursor-blink-' : 'cursor-blink');
   };
 
+  // Called on each content update during streaming
   const update = (container: HTMLElement): void => {
-    // Update container reference and init if changed
-    if (container !== currentContainer) {
-      currentContainer = container;
-      initConfig(container);
-    }
-
-    const cursor = container.querySelector('#cursor') as HTMLElement | null;
+    const cursor = ensureInit(container);
     if (!cursor) return;
 
-    // 1. Clear existing timer to keep cursor solid
-    if (activeTimer) {
-      clearTimeout(activeTimer);
-      activeTimer = null;
-    }
-
-    // 2. Reset the animation cycle so it starts fully visible
+    clearTimer();
     resetBlinkAnimation(container);
 
-    // 3. Make cursor "active" (solid/non-blinking via CSS)
+    // Restore configured blink delay (may have been set to 0 by setBlinking)
+    container.style.setProperty('--cursor-blink-delay', `${config.blinkDelay.toFixed(2)}s`);
+
+    // Make cursor solid while receiving updates
     cursor.classList.add('cursor-active');
 
-    // 4. Set timeout to resume blinking after user stops typing
+    // Resume blinking after idle timeout
     activeTimer = window.setTimeout(() => {
       if (cursor.isConnected) {
         cursor.classList.remove('cursor-active');
@@ -67,11 +76,26 @@ export function createCursorController(options: CursorBlinkOptions = {}) {
     }, IDLE_TIMEOUT_MS);
   };
 
-  const reset = (): void => {
-    if (activeTimer) {
-      clearTimeout(activeTimer);
-      activeTimer = null;
+  // Directly set blinking state (for empty content waiting state)
+  const setBlinking = (container: HTMLElement, blinking: boolean): void => {
+    const cursor = ensureInit(container);
+    if (!cursor) return;
+
+    clearTimer();
+
+    if (blinking) {
+      // Set delay to 0 for immediate blinking (waiting state)
+      container.style.setProperty('--cursor-blink-delay', '0s');
+      cursor.classList.remove('cursor-active');
+    } else {
+      // Restore configured delay
+      container.style.setProperty('--cursor-blink-delay', `${config.blinkDelay.toFixed(2)}s`);
+      cursor.classList.add('cursor-active');
     }
+  };
+
+  const reset = (): void => {
+    clearTimer();
     if (currentContainer) {
       const cursor = currentContainer.querySelector('#cursor') as HTMLElement | null;
       cursor?.classList.remove('cursor-active');
@@ -88,7 +112,7 @@ export function createCursorController(options: CursorBlinkOptions = {}) {
     currentContainer = null;
   };
 
-  return { update, reset, destroy };
+  return { update, setBlinking, reset, destroy };
 }
 
 export type CursorController = ReturnType<typeof createCursorController>;
