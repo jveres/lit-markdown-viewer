@@ -71,8 +71,8 @@ export class MarkdownViewer extends LitElement {
     startTime: 0
   };
   
-  // Last logged block count (to deduplicate dev logs)
-  private _lastLoggedBlockCount = 0;
+  // Last logged content length (to deduplicate dev logs)
+  private _lastLoggedContentLength = 0;
 
   // Memoization cache for rendered content
   private _lastSource = '';
@@ -195,10 +195,10 @@ export class MarkdownViewer extends LitElement {
         // Log morph stats in dev mode (only structural changes to avoid flooding)
         if (import.meta.env.DEV) {
           const stats = getMorphStats();
-          const totalBlocks = stats.updated + stats.skipped + stats.added;
-          // Only log when block count changes (deduplicates Lit double-renders)
-          if ((stats.added > 0 || stats.removed > 0) && totalBlocks !== this._lastLoggedBlockCount) {
-            this._lastLoggedBlockCount = totalBlocks;
+          const contentLength = this._throttledText.length;
+          // Only log when content length changes AND we have structural changes
+          if ((stats.added > 0 || stats.removed > 0) && contentLength !== this._lastLoggedContentLength) {
+            this._lastLoggedContentLength = contentLength;
             const parts = [];
             if (stats.added > 0) parts.push(`+${stats.added} added`);
             if (stats.removed > 0) parts.push(`-${stats.removed} removed`);
@@ -389,7 +389,7 @@ export class MarkdownViewer extends LitElement {
     this._lastResult = '';
     this._adaptiveThrottleMs = 0;
     this._lastMorphDuration = 0;
-    this._lastLoggedBlockCount = 0;
+    this._lastLoggedContentLength = 0;
     this._resetStreamingStats();
     resetMorphCache();
     this._cursorController?.reset();
