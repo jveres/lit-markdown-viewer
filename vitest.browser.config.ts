@@ -11,6 +11,14 @@ export default defineConfig({
         { browser: 'chromium' }
       ],
       headless: true
+    },
+    coverage: {
+      enabled: true,
+      provider: 'istanbul',
+      reporter: ['text', 'html'],
+      reportsDirectory: './coverage-browser',
+      include: ['src/**/*.ts'],
+      exclude: ['src/main.ts', 'src/demo-page.ts', 'src/sample-markdown.ts']
     }
   }
 });
