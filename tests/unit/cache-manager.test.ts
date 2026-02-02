@@ -190,5 +190,91 @@ describe('CacheManager', () => {
       expect(cacheManager.morphCache.has('key1')).toBe(false);
       expect(cacheManager.morphCache.has('key2')).toBe(true);
     });
+
+    it('should handle evicting more than available entries', () => {
+      cacheManager.morphCache.set('key1', 'value1');
+      cacheManager.morphCache.set('key2', 'value2');
+      
+      cacheManager.morphCache.evictOldest(10); // More than exists
+      
+      expect(cacheManager.morphCache.stats.entries).toBe(0);
+    });
+
+    it('should handle evicting from empty cache', () => {
+      cacheManager.morphCache.evictOldest(5);
+      expect(cacheManager.morphCache.stats.entries).toBe(0);
+    });
+  });
+
+  describe('memory budget eviction', () => {
+    it('should evict entries when byte limit is exceeded', () => {
+      // morphCache has 10% of budget = ~1MB
+      // Create strings that will exceed the byte limit
+      const largeString = 'x'.repeat(200 * 1024); // 200KB * 2 = 400KB per entry
+      
+      // Add entries until we exceed the byte budget
+      for (let i = 0; i < 5; i++) {
+        cacheManager.morphCache.set(`key${i}`, largeString);
+      }
+      
+      // Should have evicted some entries due to byte limit
+      expect(cacheManager.morphCache.stats.entries).toBeLessThan(5);
+    });
+  });
+
+  describe('trimIfNeeded with multiple caches', () => {
+    it('should evict from all caches when total budget exceeded', () => {
+      // Total budget is 10MB, need to exceed 90% = 9MB
+      // Each cache has individual byte limits, so fill them efficiently
+      // Using smaller strings to fit more entries before individual limits kick in
+      
+      // Fill each cache close to its byte limit with many smaller entries
+      // renderCacheSync/Async: 2.5MB each, katexDisplay/Inline: 2MB each, morph: 1MB
+      const mediumString = 'x'.repeat(50 * 1024); // 50KB * 2 = 100KB per entry
+      
+      // Fill renderCacheSync (2.5MB limit, 100 entry limit)
+      for (let i = 0; i < 25; i++) {
+        cacheManager.renderCacheSync.set(`sync${i}`, mediumString);
+      }
+      // Fill renderCacheAsync (2.5MB limit)
+      for (let i = 0; i < 25; i++) {
+        cacheManager.renderCacheAsync.set(`async${i}`, mediumString);
+      }
+      // Fill katexCacheDisplay (2MB limit)
+      for (let i = 0; i < 20; i++) {
+        cacheManager.katexCacheDisplay.set(`display${i}`, mediumString);
+      }
+      // Fill katexCacheInline (2MB limit)
+      for (let i = 0; i < 20; i++) {
+        cacheManager.katexCacheInline.set(`inline${i}`, mediumString);
+      }
+      // Fill morphCache (1MB limit, 10 entry limit)
+      for (let i = 0; i < 10; i++) {
+        cacheManager.morphCache.set(`morph${i}`, mediumString);
+      }
+      
+      const beforeStats = cacheManager.stats;
+      // Should be at ~9.5MB (close to 10MB total budget)
+      expect(beforeStats.total.estimatedBytes).toBeGreaterThan(9 * 1024 * 1024);
+      
+      const beforeTrim = beforeStats.total.entries;
+      cacheManager.trimIfNeeded();
+      const afterTrim = cacheManager.stats.total.entries;
+      
+      // Should have evicted ~25% from each cache
+      expect(afterTrim).toBeLessThan(beforeTrim);
+    });
+
+    it('should not evict when under budget threshold', () => {
+      // Add small entries that won't exceed 90% budget
+      cacheManager.renderCacheSync.set('key1', 'small');
+      cacheManager.renderCacheAsync.set('key2', 'small');
+      
+      const beforeTrim = cacheManager.stats.total.entries;
+      cacheManager.trimIfNeeded();
+      const afterTrim = cacheManager.stats.total.entries;
+      
+      expect(afterTrim).toBe(beforeTrim);
+    });
   });
 });
