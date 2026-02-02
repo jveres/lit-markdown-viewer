@@ -1191,7 +1191,9 @@ export class DemoPage extends LitElement {
     this._autoScrollEnabled = true;
     
     if (scenario === "chat") {
-      this._chatMessages = [];
+      // Pre-load 50 messages when switching to chat
+      this._chatMessages = generateChatMessages(50);
+      this._charCount = this._chatMessages.reduce((sum, m) => sum + m.content.length, 0);
       this._streamingMessageId = null;
       this._streamingContent = "";
     } else {
@@ -1516,13 +1518,13 @@ export class DemoPage extends LitElement {
         <div class="controls-content">
           <div class="controls-row">
             <button class="btn-primary" @click=${this._startChatSimulation} ?disabled=${this._isStreaming}>
-              Start Chat
+              Stream New Chat
             </button>
             <button class="btn-secondary" @click=${this._stopStreaming} ?disabled=${!this._isStreaming}>
               Stop
             </button>
             <button class="btn-secondary" @click=${this._loadChatInstant} ?disabled=${this._isStreaming}>
-              Load All
+              Reload
             </button>
             <button class="btn-danger" @click=${this._clearChat} ?disabled=${this._isStreaming}>
               Clear
