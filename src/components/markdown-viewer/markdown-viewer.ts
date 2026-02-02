@@ -56,6 +56,20 @@ export class MarkdownViewer extends LitElement {
   // Throttling state
   private _lastThrottleTime = 0;
   private _rafScheduled = false;
+  
+  // Adaptive throttling state
+  private _adaptiveThrottleMs = 0; // 0 = use throttleMs property
+  private _lastMorphDuration = 0;
+  
+  // Streaming stats
+  private _streamingStats = {
+    morphCount: 0,
+    morphTotalMs: 0,
+    morphMinMs: Infinity,
+    morphMaxMs: 0,
+    throttleMaxMs: 0,
+    startTime: 0
+  };
 
   // Memoization cache for rendered content
   private _lastSource = '';
@@ -119,9 +133,15 @@ export class MarkdownViewer extends LitElement {
 
   override willUpdate(changedProperties: PropertyValues): void {
     // Latch streaming state and focus when streaming starts
-    if (changedProperties.has('isStreaming') && this.isStreaming) {
-      this._hasStreamed = true;
-      this.focus();
+    if (changedProperties.has('isStreaming')) {
+      if (this.isStreaming) {
+        this._hasStreamed = true;
+        this._resetStreamingStats();
+        this.focus();
+      } else if (changedProperties.get('isStreaming') === true) {
+        // Streaming just ended
+        this._logStreamingStats();
+      }
     }
 
     // Handle throttling when text or streaming state changes
@@ -137,7 +157,12 @@ export class MarkdownViewer extends LitElement {
     if (this._useSyncStrategy && this._containerRef) {
       if (this.isStreaming) {
         // Use sync morph during streaming so cursor is immediately available
+        // Track duration for adaptive throttling and stats
+        const startTime = performance.now();
         perf.measure('morph', () => morphContentSync(this._containerRef!, this._renderedContent), 5);
+        this._lastMorphDuration = performance.now() - startTime;
+        this._adjustAdaptiveThrottle();
+        this._trackMorphStats();
 
         // Initialize cursor controller if not yet created
         if (!this._cursorController) {
@@ -160,6 +185,86 @@ export class MarkdownViewer extends LitElement {
   }
 
   // ---------------------------------------------------------
+  // Adaptive Throttling
+  // ---------------------------------------------------------
+
+  private _adjustAdaptiveThrottle(): void {
+    const baseThrottle = this.throttleMs;
+    const morphTime = this._lastMorphDuration;
+    
+    // Target: morph should take at most 25% of the throttle interval
+    // This leaves 75% for browser paint, GC, layout, and other work
+    // More aggressive than 50% to kick in earlier and keep UI smooth
+    const targetMorphBudget = 0.25;
+    
+    // Calculate ideal throttle based on last morph time
+    const idealThrottle = morphTime / targetMorphBudget;
+    
+    // Smoothly adjust (don't jump instantly)
+    // Move 30% toward ideal each update
+    const smoothingFactor = 0.3;
+    const currentThrottle = this._adaptiveThrottleMs || baseThrottle;
+    const newThrottle = currentThrottle + (idealThrottle - currentThrottle) * smoothingFactor;
+    
+    // Clamp to reasonable bounds
+    const minThrottle = baseThrottle; // Never go below user-specified throttle
+    const maxThrottle = Math.max(baseThrottle * 4, 200); // Max 4x base or 200ms
+    
+    this._adaptiveThrottleMs = Math.max(minThrottle, Math.min(maxThrottle, newThrottle));
+  }
+
+  private get _effectiveThrottleMs(): number {
+    return this._adaptiveThrottleMs || this.throttleMs;
+  }
+
+  // ---------------------------------------------------------
+  // Streaming Stats
+  // ---------------------------------------------------------
+
+  private _resetStreamingStats(): void {
+    this._streamingStats = {
+      morphCount: 0,
+      morphTotalMs: 0,
+      morphMinMs: Infinity,
+      morphMaxMs: 0,
+      throttleMaxMs: 0,
+      startTime: performance.now()
+    };
+  }
+
+  private _trackMorphStats(): void {
+    const morphTime = this._lastMorphDuration;
+    // Skip hash-skip morphs (< 2ms) for meaningful stats
+    if (morphTime < 2) return;
+    
+    const stats = this._streamingStats;
+    stats.morphCount++;
+    stats.morphTotalMs += morphTime;
+    stats.morphMinMs = Math.min(stats.morphMinMs, morphTime);
+    stats.morphMaxMs = Math.max(stats.morphMaxMs, morphTime);
+    stats.throttleMaxMs = Math.max(stats.throttleMaxMs, this._adaptiveThrottleMs);
+  }
+
+  private _logStreamingStats(): void {
+    // Only log in development mode
+    if (import.meta.env?.PROD) return;
+    
+    const stats = this._streamingStats;
+    if (stats.morphCount === 0) return;
+    
+    const duration = performance.now() - stats.startTime;
+    const avgMorph = stats.morphTotalMs / stats.morphCount;
+    
+    console.log(
+      `📊 Streaming complete:\n` +
+      `   Duration: ${(duration / 1000).toFixed(2)}s\n` +
+      `   Morphs: ${stats.morphCount} (avg ${avgMorph.toFixed(1)}ms, min ${stats.morphMinMs.toFixed(1)}ms, max ${stats.morphMaxMs.toFixed(1)}ms)\n` +
+      `   Throttle: base ${this.throttleMs}ms → max ${stats.throttleMaxMs.toFixed(1)}ms\n` +
+      `   Content: ${(this.text.length / 1024).toFixed(1)}KB`
+    );
+  }
+
+  // ---------------------------------------------------------
   // Throttling Implementation (RAF-based)
   // ---------------------------------------------------------
 
@@ -172,9 +277,10 @@ export class MarkdownViewer extends LitElement {
     }
 
     const now = Date.now();
+    const effectiveThrottle = this._effectiveThrottleMs;
 
     // If enough time has passed, update immediately
-    if (now - this._lastThrottleTime >= this.throttleMs) {
+    if (now - this._lastThrottleTime >= effectiveThrottle) {
       this._throttledText = this.text;
       this._lastThrottleTime = now;
     } else if (!this._rafScheduled) {
@@ -239,6 +345,9 @@ export class MarkdownViewer extends LitElement {
     this._lastStrategy = false;
     this._lastStreaming = false;
     this._lastResult = '';
+    this._adaptiveThrottleMs = 0;
+    this._lastMorphDuration = 0;
+    this._resetStreamingStats();
     resetMorphCache();
     this._cursorController?.reset();
   }
