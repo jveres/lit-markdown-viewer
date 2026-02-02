@@ -179,7 +179,7 @@ npm run bench:browser  # Morph baseline
 ## Implementation Order
 
 ### Phase 1: Quick Wins
-- [ ] 1.1 Adaptive throttling
+- [x] 1.1 Adaptive throttling ✅ (2026-02-02)
 - [ ] 1.2 KaTeX cache tuning
 - [ ] 1.3 Debounce at end of stream
 
@@ -201,6 +201,19 @@ npm run bench:browser  # Morph baseline
 - Parser benchmarks: See table above
 - Morph benchmarks: See table above
 - Demo observation: Spikes 25-35ms at 90% content
+
+### Adaptive Throttling (2026-02-02)
+- **Implementation:** Morph-time based throttle adjustment
+- **Algorithm:** Target 25% morph budget, 30% smoothing, 50-200ms range
+- **Normal CPU results:**
+  - Throttle: 50ms → 62ms at end
+  - Max morph: 22ms (down from 35ms baseline)
+  - Spikes eliminated
+- **6x CPU throttle results:**
+  - Throttle: 50ms → 200ms (max)
+  - Max morph: 137ms
+  - Avg morph: 35ms
+  - Streaming remained smooth despite slow device
 
 ### [Future entries will be added here]
 
