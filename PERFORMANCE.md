@@ -180,10 +180,10 @@ npm run bench:browser  # Morph baseline
 
 ## Implementation Order
 
-### Phase 1: Quick Wins
+### Phase 1: Quick Wins ✅ Complete
 - [x] 1.1 Adaptive throttling ✅ (2026-02-02)
 - [x] 1.2 KaTeX lazy loading ✅ (2026-02-02) - replaced cache tuning with lazy load
-- [ ] 1.3 Debounce at end of stream
+- [x] 1.3 Debounce at end of stream ✅ - superseded by adaptive throttling
 
 ### Phase 2: Core Optimizations
 - [ ] 2.1 Incremental parsing
