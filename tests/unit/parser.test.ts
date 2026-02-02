@@ -49,6 +49,16 @@ describe('parser', () => {
         expect(result).toContain('<em>italic</em>');
       });
 
+      it('should render underline with double underscores', () => {
+        const result = renderMarkdown('__underline__', false);
+        expect(result).toContain('<u>underline</u>');
+      });
+
+      it('should render italic with single underscores', () => {
+        const result = renderMarkdown('_italic_', false);
+        expect(result).toContain('<em>italic</em>');
+      });
+
       it('should render inline code', () => {
         const result = renderMarkdown('`code`', false);
         expect(result).toContain('<code>');
