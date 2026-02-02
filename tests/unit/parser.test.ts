@@ -1,0 +1,300 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderMarkdown, CURSOR_MARKER, CURSOR_HTML } from '../../src/components/markdown-viewer/parser';
+import { cacheManager } from '../../src/components/markdown-viewer/cache-manager';
+
+describe('parser', () => {
+  beforeEach(() => {
+    cacheManager.clearAll();
+  });
+
+  describe('CURSOR constants', () => {
+    it('should export cursor marker as zero-width space', () => {
+      expect(CURSOR_MARKER).toBe('\u200B');
+    });
+
+    it('should export cursor HTML with correct structure', () => {
+      expect(CURSOR_HTML).toContain('id=\'cursor\'');
+      expect(CURSOR_HTML).toContain('class=\'cursor\'');
+      expect(CURSOR_HTML).toContain('<span');
+    });
+  });
+
+  describe('renderMarkdown', () => {
+    describe('basic rendering', () => {
+      it('should return empty string for empty input', () => {
+        expect(renderMarkdown('', false)).toBe('');
+        expect(renderMarkdown('', true)).toBe('');
+      });
+
+      it('should render plain text as paragraph', () => {
+        const result = renderMarkdown('Hello world', false);
+        expect(result).toContain('<p>');
+        expect(result).toContain('Hello world');
+        expect(result).toContain('</p>');
+      });
+
+      it('should render headings', () => {
+        expect(renderMarkdown('# Heading 1', false)).toContain('<h1');
+        expect(renderMarkdown('## Heading 2', false)).toContain('<h2');
+        expect(renderMarkdown('### Heading 3', false)).toContain('<h3');
+      });
+
+      it('should render bold text', () => {
+        const result = renderMarkdown('**bold**', false);
+        expect(result).toContain('<strong>bold</strong>');
+      });
+
+      it('should render italic text', () => {
+        const result = renderMarkdown('*italic*', false);
+        expect(result).toContain('<em>italic</em>');
+      });
+
+      it('should render inline code', () => {
+        const result = renderMarkdown('`code`', false);
+        expect(result).toContain('<code>');
+        expect(result).toContain('code');
+        expect(result).toContain('</code>');
+      });
+    });
+
+    describe('GFM extensions', () => {
+      it('should render strikethrough', () => {
+        const result = renderMarkdown('~~deleted~~', false);
+        expect(result).toContain('<del>');
+        expect(result).toContain('deleted');
+      });
+
+      it('should render tables', () => {
+        const markdown = `
+| Header 1 | Header 2 |
+| -------- | -------- |
+| Cell 1   | Cell 2   |
+`.trim();
+        const result = renderMarkdown(markdown, false);
+        expect(result).toContain('<table>');
+        expect(result).toContain('<th>');
+        expect(result).toContain('<td>');
+        expect(result).toContain('table-wrapper');
+      });
+
+      it('should render task lists', () => {
+        const markdown = `
+- [x] Done
+- [ ] Todo
+`.trim();
+        const result = renderMarkdown(markdown, false);
+        expect(result).toContain('type="checkbox"');
+        expect(result).toContain('checked');
+      });
+
+      it('should render autolinks', () => {
+        const result = renderMarkdown('https://example.com', false);
+        expect(result).toContain('<a');
+        expect(result).toContain('href="https://example.com"');
+      });
+    });
+
+    describe('code blocks', () => {
+      it('should render fenced code blocks', () => {
+        const markdown = '```\ncode here\n```';
+        const result = renderMarkdown(markdown, false);
+        expect(result).toContain('<pre>');
+        expect(result).toContain('<code>');
+        expect(result).toContain('code here');
+      });
+
+      it('should wrap code blocks with copy button', () => {
+        const markdown = '```\ncode\n```';
+        const result = renderMarkdown(markdown, false);
+        expect(result).toContain('code-block-wrapper');
+        expect(result).toContain('copy-btn');
+        expect(result).toContain('copy-icon');
+        expect(result).toContain('check-icon');
+      });
+
+      it('should render code blocks with language class', () => {
+        const markdown = '```javascript\nconst x = 1;\n```';
+        const result = renderMarkdown(markdown, false);
+        expect(result).toContain('language-javascript');
+      });
+
+      it('should wrap lines in spans when using sync strategy', () => {
+        const markdown = '```\nline1\nline2\n```';
+        const result = renderMarkdown(markdown, true);
+        expect(result).toContain('class="code-line"');
+      });
+
+      it('should not wrap lines in spans when using async strategy', () => {
+        const markdown = '```\nline1\nline2\n```';
+        const result = renderMarkdown(markdown, false);
+        expect(result).not.toContain('class="code-line"');
+      });
+    });
+
+    describe('color previews', () => {
+      it('should add color preview for hex colors in code', () => {
+        const result = renderMarkdown('`#ff0000`', false);
+        expect(result).toContain('color-box');
+        expect(result).toContain('background-color: #ff0000');
+      });
+
+      it('should add color preview for 3-digit hex', () => {
+        const result = renderMarkdown('`#f00`', false);
+        expect(result).toContain('color-box');
+      });
+
+      it('should add color preview for rgb colors', () => {
+        const result = renderMarkdown('`rgb(255, 0, 0)`', false);
+        expect(result).toContain('color-box');
+      });
+
+      it('should add color preview for rgba colors', () => {
+        const result = renderMarkdown('`rgba(255, 0, 0, 0.5)`', false);
+        expect(result).toContain('color-box');
+      });
+
+      it('should add color preview for hsl colors', () => {
+        const result = renderMarkdown('`hsl(0, 100%, 50%)`', false);
+        expect(result).toContain('color-box');
+      });
+
+      it('should not add color preview for invalid hex lengths', () => {
+        const result = renderMarkdown('`#ff`', false);
+        expect(result).not.toContain('color-box');
+      });
+    });
+
+    describe('math rendering (KaTeX)', () => {
+      it('should render inline math', () => {
+        const result = renderMarkdown('$x^2$', false);
+        expect(result).toContain('katex');
+      });
+
+      it('should render display math', () => {
+        const result = renderMarkdown('$$x^2$$', false);
+        expect(result).toContain('katex');
+      });
+
+      it('should handle complex math expressions', () => {
+        const result = renderMarkdown('$\\frac{a}{b}$', false);
+        expect(result).toContain('katex');
+        expect(result).toContain('frac');
+      });
+    });
+
+    describe('links', () => {
+      it('should add target="_blank" to external links', () => {
+        const result = renderMarkdown('[link](https://example.com)', false);
+        expect(result).toContain('target="_blank"');
+        expect(result).toContain('rel="noopener noreferrer"');
+      });
+
+      it('should not add target="_blank" to anchor links', () => {
+        const result = renderMarkdown('[link](#section)', false);
+        expect(result).not.toContain('target="_blank"');
+      });
+
+      it('should sanitize javascript: hrefs', () => {
+        // Comrak might already handle this, but we double-check
+        const result = renderMarkdown('[click](javascript:alert(1))', false);
+        expect(result).not.toContain('javascript:alert');
+      });
+    });
+
+    describe('cursor injection', () => {
+      it('should replace cursor marker with cursor HTML', () => {
+        const result = renderMarkdown(`Hello${CURSOR_MARKER}`, false);
+        expect(result).toContain(CURSOR_HTML);
+        expect(result).not.toContain(CURSOR_MARKER);
+      });
+
+      it('should handle cursor marker in code blocks', () => {
+        const result = renderMarkdown(`\`\`\`\ncode${CURSOR_MARKER}\n\`\`\``, true);
+        expect(result).toContain('cursor');
+      });
+    });
+
+    describe('caching', () => {
+      it('should cache rendered output', () => {
+        const markdown = 'Test content';
+        
+        // First render
+        const result1 = renderMarkdown(markdown, false);
+        
+        // Should be cached now
+        expect(cacheManager.renderCacheAsync.has(markdown)).toBe(true);
+        
+        // Second render should return same result
+        const result2 = renderMarkdown(markdown, false);
+        expect(result2).toBe(result1);
+      });
+
+      it('should use separate caches for sync and async strategies', () => {
+        const markdown = 'Test content';
+        
+        renderMarkdown(markdown, true);
+        renderMarkdown(markdown, false);
+        
+        expect(cacheManager.renderCacheSync.has(markdown)).toBe(true);
+        expect(cacheManager.renderCacheAsync.has(markdown)).toBe(true);
+      });
+
+      it('should not cache content with cursor marker', () => {
+        const markdown = `Test${CURSOR_MARKER}`;
+        
+        renderMarkdown(markdown, false);
+        
+        // Should not be cached because it contains cursor
+        expect(cacheManager.renderCacheAsync.has(markdown)).toBe(false);
+      });
+    });
+
+    describe('alerts', () => {
+      it('should render note alerts', () => {
+        const result = renderMarkdown('> [!NOTE]\n> This is a note', false);
+        expect(result).toContain('alert');
+      });
+
+      it('should render warning alerts', () => {
+        const result = renderMarkdown('> [!WARNING]\n> This is a warning', false);
+        expect(result).toContain('alert');
+      });
+    });
+
+    describe('blockquotes', () => {
+      it('should render blockquotes', () => {
+        const result = renderMarkdown('> Quote text', false);
+        expect(result).toContain('<blockquote>');
+      });
+    });
+
+    describe('lists', () => {
+      it('should render unordered lists', () => {
+        const result = renderMarkdown('- Item 1\n- Item 2', false);
+        expect(result).toContain('<ul>');
+        expect(result).toContain('<li>');
+      });
+
+      it('should render ordered lists', () => {
+        const result = renderMarkdown('1. Item 1\n2. Item 2', false);
+        expect(result).toContain('<ol>');
+        expect(result).toContain('<li>');
+      });
+    });
+
+    describe('footnotes', () => {
+      it('should render footnotes', () => {
+        const markdown = 'Text[^1]\n\n[^1]: Footnote content';
+        const result = renderMarkdown(markdown, false);
+        expect(result).toContain('footnote');
+      });
+    });
+
+    describe('horizontal rules', () => {
+      it('should render horizontal rules', () => {
+        const result = renderMarkdown('---', false);
+        expect(result).toContain('<hr');
+      });
+    });
+  });
+});

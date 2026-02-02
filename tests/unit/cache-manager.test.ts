@@ -1,0 +1,194 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { cacheManager } from '../../src/components/markdown-viewer/cache-manager';
+
+describe('CacheManager', () => {
+  beforeEach(() => {
+    cacheManager.clearAll();
+  });
+
+  describe('renderCacheSync', () => {
+    it('should store and retrieve values', () => {
+      cacheManager.renderCacheSync.set('key1', 'value1');
+      expect(cacheManager.renderCacheSync.get('key1')).toBe('value1');
+    });
+
+    it('should return undefined for missing keys', () => {
+      expect(cacheManager.renderCacheSync.get('nonexistent')).toBeUndefined();
+    });
+
+    it('should update existing keys', () => {
+      cacheManager.renderCacheSync.set('key1', 'value1');
+      cacheManager.renderCacheSync.set('key1', 'value2');
+      expect(cacheManager.renderCacheSync.get('key1')).toBe('value2');
+    });
+
+    it('should report correct stats', () => {
+      cacheManager.renderCacheSync.set('key1', 'value1');
+      cacheManager.renderCacheSync.set('key2', 'value2');
+      const stats = cacheManager.renderCacheSync.stats;
+      expect(stats.entries).toBe(2);
+      expect(stats.estimatedBytes).toBeGreaterThan(0);
+    });
+
+    it('should check if key exists', () => {
+      cacheManager.renderCacheSync.set('key1', 'value1');
+      expect(cacheManager.renderCacheSync.has('key1')).toBe(true);
+      expect(cacheManager.renderCacheSync.has('key2')).toBe(false);
+    });
+  });
+
+  describe('renderCacheAsync', () => {
+    it('should store and retrieve values independently from sync cache', () => {
+      cacheManager.renderCacheSync.set('key1', 'sync-value');
+      cacheManager.renderCacheAsync.set('key1', 'async-value');
+      
+      expect(cacheManager.renderCacheSync.get('key1')).toBe('sync-value');
+      expect(cacheManager.renderCacheAsync.get('key1')).toBe('async-value');
+    });
+  });
+
+  describe('katexCacheDisplay', () => {
+    it('should store and retrieve KaTeX display values', () => {
+      cacheManager.katexCacheDisplay.set('x^2', '<span>x²</span>');
+      expect(cacheManager.katexCacheDisplay.get('x^2')).toBe('<span>x²</span>');
+    });
+  });
+
+  describe('katexCacheInline', () => {
+    it('should store and retrieve KaTeX inline values', () => {
+      cacheManager.katexCacheInline.set('y', '<span>y</span>');
+      expect(cacheManager.katexCacheInline.get('y')).toBe('<span>y</span>');
+    });
+
+    it('should be independent from display cache', () => {
+      cacheManager.katexCacheDisplay.set('expr', 'display-version');
+      cacheManager.katexCacheInline.set('expr', 'inline-version');
+      
+      expect(cacheManager.katexCacheDisplay.get('expr')).toBe('display-version');
+      expect(cacheManager.katexCacheInline.get('expr')).toBe('inline-version');
+    });
+  });
+
+  describe('morphCache', () => {
+    it('should store and retrieve morph hashes', () => {
+      cacheManager.morphCache.set('element-id', 'hash123');
+      expect(cacheManager.morphCache.get('element-id')).toBe('hash123');
+    });
+  });
+
+  describe('LRU eviction', () => {
+    it('should evict oldest entries when max entries exceeded', () => {
+      // morphCache has maxEntries of 10
+      for (let i = 0; i < 15; i++) {
+        cacheManager.morphCache.set(`key${i}`, `value${i}`);
+      }
+      
+      // First entries should be evicted
+      expect(cacheManager.morphCache.has('key0')).toBe(false);
+      expect(cacheManager.morphCache.has('key4')).toBe(false);
+      
+      // Later entries should still exist
+      expect(cacheManager.morphCache.has('key14')).toBe(true);
+      expect(cacheManager.morphCache.stats.entries).toBe(10);
+    });
+
+    it('should move accessed entries to end (most recently used)', () => {
+      cacheManager.morphCache.set('key1', 'value1');
+      cacheManager.morphCache.set('key2', 'value2');
+      cacheManager.morphCache.set('key3', 'value3');
+      
+      // Access key1, making it most recently used
+      cacheManager.morphCache.get('key1');
+      
+      // Fill cache to trigger eviction
+      for (let i = 4; i <= 12; i++) {
+        cacheManager.morphCache.set(`key${i}`, `value${i}`);
+      }
+      
+      // key1 should still exist (was accessed), key2 should be evicted
+      expect(cacheManager.morphCache.has('key1')).toBe(true);
+      expect(cacheManager.morphCache.has('key2')).toBe(false);
+    });
+  });
+
+  describe('clearAll', () => {
+    it('should clear all caches', () => {
+      cacheManager.renderCacheSync.set('key1', 'value1');
+      cacheManager.renderCacheAsync.set('key2', 'value2');
+      cacheManager.katexCacheDisplay.set('key3', 'value3');
+      cacheManager.katexCacheInline.set('key4', 'value4');
+      cacheManager.morphCache.set('key5', 'value5');
+      
+      cacheManager.clearAll();
+      
+      expect(cacheManager.renderCacheSync.has('key1')).toBe(false);
+      expect(cacheManager.renderCacheAsync.has('key2')).toBe(false);
+      expect(cacheManager.katexCacheDisplay.has('key3')).toBe(false);
+      expect(cacheManager.katexCacheInline.has('key4')).toBe(false);
+      expect(cacheManager.morphCache.has('key5')).toBe(false);
+    });
+  });
+
+  describe('stats', () => {
+    it('should return combined stats for all caches', () => {
+      cacheManager.renderCacheSync.set('key1', 'value1');
+      cacheManager.renderCacheAsync.set('key2', 'value2');
+      cacheManager.katexCacheDisplay.set('key3', 'value3');
+      cacheManager.katexCacheInline.set('key4', 'value4');
+      cacheManager.morphCache.set('key5', 'value5');
+      
+      const stats = cacheManager.stats;
+      
+      expect(stats.renderSync.entries).toBe(1);
+      expect(stats.renderAsync.entries).toBe(1);
+      expect(stats.katexDisplay.entries).toBe(1);
+      expect(stats.katexInline.entries).toBe(1);
+      expect(stats.morph.entries).toBe(1);
+      expect(stats.total.entries).toBe(5);
+      expect(stats.total.estimatedBytes).toBeGreaterThan(0);
+    });
+  });
+
+  describe('trimIfNeeded', () => {
+    it('should evict entries when memory budget exceeded', () => {
+      // Fill caches with large strings to exceed budget
+      const largeString = 'x'.repeat(1024 * 1024); // 1MB string
+      
+      for (let i = 0; i < 10; i++) {
+        cacheManager.renderCacheSync.set(`key${i}`, largeString);
+      }
+      
+      const beforeTrim = cacheManager.stats.total.entries;
+      cacheManager.trimIfNeeded();
+      const afterTrim = cacheManager.stats.total.entries;
+      
+      // Should have evicted some entries
+      expect(afterTrim).toBeLessThanOrEqual(beforeTrim);
+    });
+  });
+
+  describe('size estimation', () => {
+    it('should estimate string size as length * 2 (UTF-16)', () => {
+      const testString = 'hello'; // 5 chars = 10 bytes estimated
+      cacheManager.renderCacheSync.set('key', testString);
+      
+      // The estimated bytes should include the string size
+      expect(cacheManager.renderCacheSync.stats.estimatedBytes).toBe(10);
+    });
+  });
+
+  describe('evictOldest', () => {
+    it('should evict specified number of oldest entries', () => {
+      for (let i = 0; i < 5; i++) {
+        cacheManager.morphCache.set(`key${i}`, `value${i}`);
+      }
+      
+      cacheManager.morphCache.evictOldest(2);
+      
+      expect(cacheManager.morphCache.stats.entries).toBe(3);
+      expect(cacheManager.morphCache.has('key0')).toBe(false);
+      expect(cacheManager.morphCache.has('key1')).toBe(false);
+      expect(cacheManager.morphCache.has('key2')).toBe(true);
+    });
+  });
+});

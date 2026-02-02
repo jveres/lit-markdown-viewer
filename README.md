@@ -344,6 +344,38 @@ The component auto-focuses when streaming starts. Click elsewhere or tab away to
 | `katex`        | Math rendering              |
 | `idiomorph`    | DOM morphing                |
 
+## Testing
+
+Run unit tests:
+
+```bash
+npm test
+```
+
+Run tests in watch mode:
+
+```bash
+npm run test:watch
+```
+
+Run tests with coverage:
+
+```bash
+npm run test:coverage
+```
+
+### Test Structure
+
+```
+tests/
+└── unit/
+    ├── cache-manager.test.ts    # LRU cache tests
+    ├── cursor-controller.test.ts # Cursor blink state tests
+    ├── parser.test.ts           # Markdown rendering tests
+    ├── animate-scroll.test.ts   # Scroll utility tests
+    └── utils.test.ts            # HTML decode tests
+```
+
 ## Browser Support
 
 - Chrome 90+
