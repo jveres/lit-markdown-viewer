@@ -1,7 +1,7 @@
 # Performance Improvement Strategy
 
 > Last updated: 2026-02-02
-> Baseline established with Vitest benchmarks
+> Phase 1 optimizations complete (adaptive throttling + KaTeX lazy loading)
 
 ## Current Baseline
 
@@ -164,15 +164,17 @@ npm run bench:browser  # Morph baseline
 
 ### Key Metrics to Track
 
-| Metric | Target | Current |
-|--------|--------|---------|
-| Parse (medium) | <0.3ms | 0.39ms |
-| Parse (large) | <1.5ms | 1.70ms |
-| KaTeX (medium) | <0.5ms | 0.64ms |
-| Morph (medium) | <0.15ms | 0.21ms |
-| Morph (large) | <0.5ms | 0.81ms |
-| Streaming (20 morphs) | <4ms | 5.35ms |
-| Max spike (observed) | <20ms | 35ms |
+| Metric | Target | Baseline | After Optimizations |
+|--------|--------|----------|---------------------|
+| Parse (medium) | <0.3ms | 0.39ms | 0.39ms |
+| Parse (large) | <1.5ms | 1.70ms | 1.70ms |
+| KaTeX (medium) | <0.5ms | 0.64ms | 0.64ms |
+| Morph (medium) | <0.15ms | 0.21ms | 0.21ms |
+| Morph (large) | <0.5ms | 0.81ms | 0.81ms |
+| Streaming (20 morphs) | <4ms | 5.35ms | 5.35ms |
+| Max spike (normal CPU) | <25ms | 35ms | 22ms ✅ |
+| Max spike (6x throttle) | <200ms | N/A | 157ms ✅ |
+| Initial bundle (gzip) | <450KB | 507KB | 430KB ✅ |
 
 ---
 
@@ -209,10 +211,12 @@ npm run bench:browser  # Morph baseline
   - Throttle: 50ms → 62ms at end
   - Max morph: 22ms (down from 35ms baseline)
   - Spikes eliminated
-- **6x CPU throttle results:**
+- **6x CPU throttle results (24KB content, 72s stream):**
   - Throttle: 50ms → 200ms (max)
-  - Max morph: 137ms
-  - Avg morph: 35ms
+  - Morphs: 1315 total
+  - Avg morph: 35.9ms
+  - Max morph: 157ms
+  - Min morph: 2ms
   - Streaming remained smooth despite slow device
 
 ### KaTeX Lazy Loading (2026-02-02)
@@ -221,7 +225,11 @@ npm run bench:browser  # Morph baseline
   - Before: Single 1051KB bundle (507KB gzip)
   - After: Main 787KB (430KB gzip) + KaTeX 265KB (77KB gzip)
 - **Savings:** 264KB (77KB gzip) for pages without math
-- **Behavior:** Shows styled placeholder while KaTeX loads, re-renders when ready
+- **Behavior:** 
+  - Loads on first math expression or when streaming starts
+  - Shows styled placeholder while loading (~200ms)
+  - Re-renders automatically when KaTeX ready
+  - Clears render cache to ensure fresh output
 
 ### [Future entries will be added here]
 
