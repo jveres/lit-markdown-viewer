@@ -984,12 +984,13 @@ export class DemoPage extends LitElement {
     this._setupScrollHandlers();
   }
 
-  override updated(changedProperties: Map<string, unknown>): void {
+  override async updated(changedProperties: Map<string, unknown>): Promise<void> {
     if (changedProperties.has("_showScrollButton")) {
       this._animateScrollButton();
     }
     if (changedProperties.has("_scenario")) {
-      // Re-setup scroll handlers when scenario changes
+      // Wait for DOM to be fully updated before setting up handlers
+      await this.updateComplete;
       this._setupScrollHandlers();
     }
   }
@@ -1038,7 +1039,9 @@ export class DemoPage extends LitElement {
   }
 
   private _getActiveContainer(): HTMLDivElement | undefined {
-    return this._scenario === "streaming" ? this._viewerContainer : this._chatContainer;
+    // Query directly instead of using @query cache (handles conditional rendering)
+    const selector = this._scenario === "streaming" ? ".viewer-container" : ".chat-container";
+    return this.shadowRoot?.querySelector(selector) as HTMLDivElement | undefined;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
