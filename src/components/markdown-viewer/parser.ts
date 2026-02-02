@@ -1,7 +1,36 @@
-import katex from 'katex';
 import { decodeHtml } from './utils';
 import { markdownToHTML } from '@nick/comrak';
 import { cacheManager } from './cache-manager';
+
+// --------------------------------------------------------------------------
+// Lazy KaTeX Loading
+// --------------------------------------------------------------------------
+
+type KaTeXModule = typeof import('katex');
+let katexModule: KaTeXModule | null = null;
+let katexLoadPromise: Promise<KaTeXModule> | null = null;
+
+/**
+ * Preload KaTeX module (non-blocking)
+ * Call this early to warm up the cache before math is needed
+ */
+export function preloadKaTeX(): Promise<void> {
+  if (katexModule) return Promise.resolve();
+  if (!katexLoadPromise) {
+    katexLoadPromise = import('katex').then((mod) => {
+      katexModule = mod.default ? { renderToString: mod.default.renderToString } as KaTeXModule : mod;
+      return katexModule;
+    });
+  }
+  return katexLoadPromise.then(() => {});
+}
+
+/**
+ * Check if KaTeX is loaded and ready
+ */
+export function isKaTeXReady(): boolean {
+  return katexModule !== null;
+}
 
 /**
  * Cursor marker string and HTML replacement
@@ -200,9 +229,15 @@ function processCodeAndColors(
 
 /**
  * Process Math Blocks (KaTeX)
+ * If KaTeX isn't loaded yet, triggers lazy load and shows placeholder
  */
 function processMath(html: string): string {
   if (!html.includes('data-math-style')) return html;
+
+  // Trigger KaTeX preload if not already loading
+  if (!katexModule && !katexLoadPromise) {
+    preloadKaTeX();
+  }
 
   return html.replace(MATH_SPAN_RE, (match, style, content) => {
     const isDisplay = style === 'display';
@@ -222,10 +257,16 @@ function processMath(html: string): string {
       return hasCursor ? cached + CURSOR_MARKER : cached;
     }
 
+    // If KaTeX not loaded yet, show styled placeholder
+    if (!katexModule) {
+      const placeholder = `<span class="math-placeholder" data-math-style="${style}">${cleanContent}</span>`;
+      return hasCursor ? placeholder + CURSOR_MARKER : placeholder;
+    }
+
     const tex = decodeHtml(cleanContent);
 
     try {
-      const result = katex.renderToString(tex, {
+      const result = katexModule.renderToString(tex, {
         displayMode: isDisplay,
         throwOnError: false,
         strict: false,  // Suppress warnings for edge cases

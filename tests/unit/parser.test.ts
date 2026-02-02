@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { renderMarkdown, CURSOR_MARKER, CURSOR_HTML } from '../../src/components/markdown-viewer/parser';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
+import { renderMarkdown, CURSOR_MARKER, CURSOR_HTML, preloadKaTeX } from '../../src/components/markdown-viewer/parser';
 import { cacheManager } from '../../src/components/markdown-viewer/cache-manager';
 
 describe('parser', () => {
@@ -195,6 +195,11 @@ describe('parser', () => {
     });
 
     describe('math rendering (KaTeX)', () => {
+      // Preload KaTeX before math tests (lazy loaded)
+      beforeAll(async () => {
+        await preloadKaTeX();
+      });
+
       it('should render inline math', () => {
         const result = renderMarkdown('$x^2$', false);
         expect(result).toContain('katex');

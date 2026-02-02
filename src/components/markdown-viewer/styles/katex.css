@@ -9,3 +9,20 @@
   text-align: left !important;
   margin-left: 0 !important;
 }
+
+/* Math placeholder while KaTeX is loading */
+.markdown .math-placeholder {
+  font-family: 'KaTeX_Math', 'Times New Roman', serif;
+  font-style: italic;
+  color: var(--color-fg-muted, #666);
+  padding: 0.1em 0.2em;
+  background: var(--color-bg-subtle, #f6f8fa);
+  border-radius: 3px;
+}
+
+.markdown .math-placeholder[data-math-style="display"] {
+  display: block;
+  text-align: center;
+  padding: 0.5em;
+  margin: 1em 0;
+}

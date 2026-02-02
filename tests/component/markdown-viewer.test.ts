@@ -1,6 +1,7 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import '../../src/components/markdown-viewer/markdown-viewer';
 import type { MarkdownViewer } from '../../src/components/markdown-viewer/markdown-viewer';
+import { preloadKaTeX } from '../../src/components/markdown-viewer/parser';
 
 // Helper to create and mount a component
 async function createComponent(props: { text?: string; isStreaming?: boolean; tabindex?: string; className?: string } = {}): Promise<MarkdownViewer> {
@@ -148,6 +149,11 @@ describe('markdown-viewer component', () => {
   });
 
   describe('math rendering', () => {
+    // Preload KaTeX before math tests (lazy loaded)
+    beforeAll(async () => {
+      await preloadKaTeX();
+    });
+
     it('should render inline math', async () => {
       const el = await createComponent({ text: '$x^2$' });
       

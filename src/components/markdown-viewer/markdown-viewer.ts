@@ -2,7 +2,7 @@ import { LitElement, html, unsafeCSS, type PropertyValues } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
-import { CURSOR_MARKER, renderMarkdown } from './parser';
+import { CURSOR_MARKER, renderMarkdown, preloadKaTeX, isKaTeXReady } from './parser';
 import { morphContent, morphContentSync, resetMorphCache } from './morph';
 import { createCursorController, type CursorController } from './cursor-controller';
 import { cacheManager } from './cache-manager';
@@ -137,6 +137,7 @@ export class MarkdownViewer extends LitElement {
       if (this.isStreaming) {
         this._hasStreamed = true;
         this._resetStreamingStats();
+        this._ensureKaTeXLoaded();
         this.focus();
       } else if (changedProperties.get('isStreaming') === true) {
         // Streaming just ended
@@ -148,6 +149,23 @@ export class MarkdownViewer extends LitElement {
     if (changedProperties.has('text') || changedProperties.has('isStreaming')) {
       this._updateThrottledText();
     }
+  }
+
+  /**
+   * Ensure KaTeX is loaded, trigger re-render when ready
+   */
+  private _ensureKaTeXLoaded(): void {
+    if (isKaTeXReady()) return;
+    
+    preloadKaTeX().then(() => {
+      // Clear memoization cache to force re-render with KaTeX
+      this._lastSource = '';
+      this._lastResult = '';
+      // Trigger update if we have content
+      if (this.text) {
+        this.requestUpdate();
+      }
+    });
   }
 
   override updated(changedProperties: PropertyValues): void {
