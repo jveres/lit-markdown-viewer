@@ -15,7 +15,7 @@ A high-performance Lit Web Component for rendering markdown with streaming suppo
 - **Math Rendering** - KaTeX support for inline (`$...$`) and block (`$$...$$`) math
 - **GitHub Flavored Markdown** - Tables, task lists, strikethrough, alerts, footnotes
 - **Smart Caching** - LRU caches for rendered content, KaTeX output, and DOM state
-- **Cursor Animation** - Blinking cursor during streaming with idle detection
+- **Cursor Animation** - Blinking cursor during streaming with idle detection and empty content waiting state
 - **Dark Mode** - Full dark theme support via CSS class
 
 ## Installation
@@ -33,6 +33,16 @@ npm run dev
 ```
 
 Then open http://localhost:5173 in your browser.
+
+## Demo Features
+
+The [live demo](https://jveres.github.io/lit-markdown-viewer) includes:
+
+- **Streaming simulation** with configurable speed and latency
+- **Initial latency option** - 2s delay before content starts (shows cursor blinking)
+- **Collapsible controls** - Collapsed by default on mobile
+- **Mobile optimized** - Safe area support for iPhone notch/home indicator
+- **Dark mode** - Follows system preference
 
 ## Usage
 
@@ -185,6 +195,7 @@ const controller = createCursorController({
 });
 
 controller.update(container); // Call on each content update
+controller.setBlinking(container, true); // Immediate blink (for empty content)
 controller.reset(); // Reset blink state
 controller.destroy(); // Cleanup
 ```
@@ -194,6 +205,7 @@ controller.destroy(); // Cleanup
 - Cursor stays solid while receiving updates
 - Starts blinking after 500ms idle
 - Uses CSS animation toggling to restart blink cycle
+- Immediate blinking (no delay) when waiting for content via `setBlinking()`
 
 ## Streaming Optimization
 
