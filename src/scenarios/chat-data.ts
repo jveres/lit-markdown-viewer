@@ -19,16 +19,16 @@ const SAMPLE_USER_MESSAGES = [
   "Can you explain conditional types?",
   "How do I migrate a JavaScript project to TypeScript?",
   "What are some TypeScript best practices?",
-  "How does type inference work?",
-  "What is the `unknown` type?",
-  "Explain discriminated unions",
-  "How do I type React components with TypeScript?",
-  "What are template literal types?",
+  "Explain the quadratic formula",
+  "What is the derivative of x²?",
+  "Explain matrix multiplication",
+  "What is Euler's identity?",
+  "How does the Pythagorean theorem work?",
   "How do I use TypeScript with Node.js?",
   "What is `satisfies` keyword?",
   "How do I create type guards?",
   "What are utility types in TypeScript?",
-  "How do I handle async/await with proper types?",
+  "Explain the summation notation",
   "What is declaration merging?",
   "How do I type third-party libraries without types?",
   "Explain the `infer` keyword",
@@ -327,6 +327,150 @@ function process(data: any): any {
   return data.toUpperCase(); // No type safety
 }
 \`\`\``,
+
+  `## The Quadratic Formula
+
+The **quadratic formula** solves any equation of the form $ax^2 + bx + c = 0$:
+
+$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$
+
+### Components
+
+| Part | Meaning |
+|------|---------|
+| $a, b, c$ | Coefficients of the quadratic |
+| $b^2 - 4ac$ | **Discriminant** - determines number of solutions |
+| $\\pm$ | Gives two solutions (roots) |
+
+### Discriminant Cases
+
+- If $b^2 - 4ac > 0$: Two distinct real roots
+- If $b^2 - 4ac = 0$: One repeated real root  
+- If $b^2 - 4ac < 0$: Two complex conjugate roots
+
+### Example
+
+For $2x^2 + 5x - 3 = 0$:
+
+$$x = \\frac{-5 \\pm \\sqrt{25 + 24}}{4} = \\frac{-5 \\pm 7}{4}$$
+
+So $x = \\frac{1}{2}$ or $x = -3$`,
+
+  `## Derivative of $x^2$
+
+Using the **power rule**: if $f(x) = x^n$, then $f'(x) = nx^{n-1}$
+
+$$\\frac{d}{dx}(x^2) = 2x$$
+
+### Step by Step (from first principles)
+
+Using the limit definition of a derivative:
+
+$$f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}$$
+
+For $f(x) = x^2$:
+
+$$\\begin{aligned}
+f'(x) &= \\lim_{h \\to 0} \\frac{(x+h)^2 - x^2}{h} \\\\
+&= \\lim_{h \\to 0} \\frac{x^2 + 2xh + h^2 - x^2}{h} \\\\
+&= \\lim_{h \\to 0} \\frac{2xh + h^2}{h} \\\\
+&= \\lim_{h \\to 0} (2x + h) \\\\
+&= 2x
+\\end{aligned}$$
+
+### Common Derivatives
+
+| Function | Derivative |
+|----------|------------|
+| $x^n$ | $nx^{n-1}$ |
+| $e^x$ | $e^x$ |
+| $\\ln(x)$ | $\\frac{1}{x}$ |
+| $\\sin(x)$ | $\\cos(x)$ |`,
+
+  `## Matrix Multiplication
+
+For matrices $A$ (size $m \\times n$) and $B$ (size $n \\times p$), the product $C = AB$ has size $m \\times p$.
+
+Each element $c_{ij}$ is computed as:
+
+$$c_{ij} = \\sum_{k=1}^{n} a_{ik} \\cdot b_{kj}$$
+
+### Example
+
+$$\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix} \\times \\begin{pmatrix} 5 & 6 \\\\ 7 & 8 \\end{pmatrix} = \\begin{pmatrix} 19 & 22 \\\\ 43 & 50 \\end{pmatrix}$$
+
+**Calculation:**
+- $c_{11} = 1 \\cdot 5 + 2 \\cdot 7 = 19$
+- $c_{12} = 1 \\cdot 6 + 2 \\cdot 8 = 22$
+- $c_{21} = 3 \\cdot 5 + 4 \\cdot 7 = 43$
+- $c_{22} = 3 \\cdot 6 + 4 \\cdot 8 = 50$
+
+### Key Properties
+
+- **Not commutative**: $AB \\neq BA$ in general
+- **Associative**: $(AB)C = A(BC)$
+- **Distributive**: $A(B + C) = AB + AC$`,
+
+  `## Euler's Identity
+
+Often called the "most beautiful equation in mathematics":
+
+$$e^{i\\pi} + 1 = 0$$
+
+This elegant formula connects **five fundamental constants**:
+
+| Constant | Meaning |
+|----------|---------|
+| $e$ | Euler's number ($\\approx 2.71828$) |
+| $i$ | Imaginary unit ($\\sqrt{-1}$) |
+| $\\pi$ | Pi ($\\approx 3.14159$) |
+| $1$ | Multiplicative identity |
+| $0$ | Additive identity |
+
+### Derivation from Euler's Formula
+
+Euler's formula states:
+
+$$e^{ix} = \\cos(x) + i\\sin(x)$$
+
+When $x = \\pi$:
+
+$$e^{i\\pi} = \\cos(\\pi) + i\\sin(\\pi) = -1 + 0i = -1$$
+
+Therefore: $e^{i\\pi} + 1 = 0$ ✨`,
+
+  `## Pythagorean Theorem
+
+For a right triangle with legs $a$ and $b$, and hypotenuse $c$:
+
+$$a^2 + b^2 = c^2$$
+
+Or equivalently: $c = \\sqrt{a^2 + b^2}$
+
+### Visual Proof
+
+The theorem states that the area of the square on the hypotenuse equals the sum of the areas of the squares on the other two sides.
+
+### Common Pythagorean Triples
+
+| $a$ | $b$ | $c$ |
+|-----|-----|-----|
+| 3 | 4 | 5 |
+| 5 | 12 | 13 |
+| 8 | 15 | 17 |
+| 7 | 24 | 25 |
+
+### 3D Extension
+
+In three dimensions:
+
+$$d = \\sqrt{x^2 + y^2 + z^2}$$
+
+### Example
+
+A ladder 10m long leans against a wall. If the base is 6m from the wall, how high does it reach?
+
+$$h = \\sqrt{10^2 - 6^2} = \\sqrt{100 - 36} = \\sqrt{64} = 8\\text{m}$$`,
 ];
 
 export function generateChatMessages(count: number): ChatMessage[] {
