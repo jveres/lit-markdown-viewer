@@ -1997,7 +1997,7 @@ function process(data: unknown): string {
 function process(data: any): any {
   return data.toUpperCase(); // No type safety
 }
-\`\`\``];function en(A){const e=[],t=Math.floor(A/2);for(let g=0;g<t;g++)e.push({id:g*2,role:"user",content:$g[g%$g.length]}),e.push({id:g*2+1,role:"assistant",content:An[g%An.length]});return e}let j=class extends Ee{constructor(){super(...arguments),this._scenario="streaming",this._text=CA,this._isStreaming=!1,this._charCount=CA.length,this._isPaused=!1,this._speed="normal",this._latency="heavy",this._isDark=!1,this._autoScrollEnabled=!0,this._showScrollButton=!1,this._initialLatencyEnabled=!0,this._controlsCollapsed=window.innerWidth<640,this._chatMessages=[],this._streamingMessageId=null,this._streamingContent="",this._streamingActive=!1,this._currentIndex=CA.length,this._lastContentHeight=0,this._lastTouchY=0,this._scrollButtonVisible=!1,this._scrollButtonAnimation=null,this._resizeObserver=null,this._speedPresets={"ultra-slow":[1,150],"very-slow":[1,80],slow:[2,60],normal:[4,40],fast:[10,30],"very-fast":[25,20]},this._latencyPresets={none:[0,0,0],light:[.05,200,500],medium:[.08,300,1500],heavy:[.12,500,3e3],extreme:[.15,1e3,5e3]},this._darkModeQuery=window.matchMedia("(prefers-color-scheme: dark)"),this._handleThemeChange=A=>{this._isDark=A.matches,this.classList.toggle("dark",A.matches)},this._handleKeyDown=A=>{A.key==="Escape"&&this._isStreaming?this._stopStreaming():["PageUp","ArrowUp","Home"].includes(A.key)&&this._disableAutoScroll()},this._handleWheel=A=>{A.deltaY<0&&this._disableAutoScroll()},this._handleTouchStart=A=>{A.touches.length>0&&(this._lastTouchY=A.touches[0].clientY)},this._handleTouchMove=A=>{if(A.touches.length>0){const e=A.touches[0].clientY;e-this._lastTouchY>10&&this._disableAutoScroll(),this._lastTouchY=e}},this._handleScroll=()=>{const A=this._getActiveContainer();A&&(_g(A,30)&&!this._autoScrollEnabled&&(this._autoScrollEnabled=!0),this._updateScrollButtonVisibility())},this._handleContentResize=A=>{if(this._getActiveContainer()){for(const t of A){const g=t.contentRect.height;this._isStreaming&&this._autoScrollEnabled&&g>this._lastContentHeight&&this._scrollToBottom(),this._lastContentHeight=g}this._updateScrollButtonVisibility()}}}connectedCallback(){super.connectedCallback(),this._isDark=this._darkModeQuery.matches,this.classList.toggle("dark",this._isDark),this._darkModeQuery.addEventListener("change",this._handleThemeChange),document.addEventListener("keydown",this._handleKeyDown)}firstUpdated(){this._setupScrollHandlers()}updated(A){A.has("_showScrollButton")&&this._animateScrollButton(),A.has("_scenario")&&this._setupScrollHandlers()}disconnectedCallback(){super.disconnectedCallback(),this._stopStreaming(),document.removeEventListener("keydown",this._handleKeyDown),this._darkModeQuery.removeEventListener("change",this._handleThemeChange),this._cleanupScrollHandlers(),this._resizeObserver?.disconnect(),this._resizeObserver=null}_setupScrollHandlers(){this._cleanupScrollHandlers();const A=this._getActiveContainer();A&&(A.addEventListener("wheel",this._handleWheel,{passive:!0}),A.addEventListener("touchstart",this._handleTouchStart,{passive:!0}),A.addEventListener("touchmove",this._handleTouchMove,{passive:!0}),A.addEventListener("scroll",this._handleScroll,{passive:!0}),this._resizeObserver=new ResizeObserver(this._handleContentResize),this._resizeObserver.observe(A),this._lastContentHeight=A.scrollHeight)}_cleanupScrollHandlers(){const A=[this._viewerContainer,this._chatContainer];for(const e of A)e&&(e.removeEventListener("wheel",this._handleWheel),e.removeEventListener("touchstart",this._handleTouchStart),e.removeEventListener("touchmove",this._handleTouchMove),e.removeEventListener("scroll",this._handleScroll));this._resizeObserver?.disconnect()}_getActiveContainer(){return this._scenario==="streaming"?this._viewerContainer:this._chatContainer}_scrollToBottom(){const A=this._getActiveContainer();A&&Ps(A,{dynamicTarget:!0,afterDelay:0})}_disableAutoScroll(){this._autoScrollEnabled=!1;const A=this._getActiveContainer();A&&qs(A)}_scrollToBottomAndEnable(){this._autoScrollEnabled=!0,this._showScrollButton=!1,this._scrollToBottom()}_updateScrollButtonVisibility(){const A=this._getActiveContainer();if(!A)return;const e=this._isStreaming?150:1,t=_g(A,e),g=A.scrollHeight>A.clientHeight,n=this._isStreaming&&this._autoScrollEnabled;this._showScrollButton=g&&!t&&!n}_animateScrollButton(){this._scrollButton&&(this._scrollButtonAnimation?.pause(),this._scrollButtonAnimation=null,this._showScrollButton&&!this._scrollButtonVisible?(this._scrollButtonVisible=!0,this._scrollButton.classList.add("visible"),this._scrollButtonAnimation=qg(this._scrollButton,{opacity:[0,1],translateY:["1rem","0rem"],duration:250,ease:"outCubic"})):!this._showScrollButton&&this._scrollButtonVisible&&(this._scrollButtonAnimation=qg(this._scrollButton,{opacity:[1,0],translateY:["0rem","1rem"],duration:200,ease:"inCubic",onComplete:()=>{this._scrollButtonVisible=!1,this._scrollButton?.classList.remove("visible")}})))}_switchScenario(A){this._scenario!==A&&(this._stopStreaming(),this._scenario=A,this._showScrollButton=!1,this._autoScrollEnabled=!0,A==="chat"?(this._chatMessages=[],this._streamingMessageId=null,this._streamingContent=""):(this._text=CA,this._charCount=CA.length,this._currentIndex=CA.length))}async _startStreaming(){if(this._streamingActive||(this._viewer?.reset(),this._text="",this._currentIndex=0,this._charCount=0,this._isStreaming=!0,this._streamingActive=!0,this._autoScrollEnabled=!0,this._lastContentHeight=0,this._initialLatencyEnabled&&(this._isPaused=!0,await this._delay(2e3),this._isPaused=!1,!this._streamingActive)))return;const[A,e]=this._speedPresets[this._speed],[t,g,n]=this._latencyPresets[this._latency];for(;this._streamingActive&&this._currentIndex<CA.length;){if(t>0&&Math.random()<t){const l=g+Math.random()*(n-g);if(this._isPaused=!0,await this._delay(l),this._isPaused=!1,!this._streamingActive)break}const i=Math.min(this._currentIndex+A,CA.length);this._text=CA.slice(0,i),this._charCount=i,this._currentIndex=i,this._autoScrollEnabled&&this._scrollToBottom(),await this._delay(e)}this._stopStreaming()}_stopStreaming(){this._streamingActive=!1,this._isStreaming=!1,this._isPaused=!1,this._streamingMessageId=null}_loadInstant(){this._stopStreaming(),this._viewer?.reset(),this._text=CA,this._charCount=CA.length,this._currentIndex=CA.length}_clear(){this._stopStreaming(),this._viewer?.reset(),this._text="",this._charCount=0,this._currentIndex=0,this._lastContentHeight=0,this._showScrollButton=!1}async _startChatSimulation(){if(this._streamingActive)return;this._chatMessages=[],this._streamingActive=!0,this._isStreaming=!0,this._autoScrollEnabled=!0,this._charCount=0;const A=en(50),[e,t]=this._speedPresets[this._speed],[g,n,i]=this._latencyPresets[this._latency];for(const l of A){if(!this._streamingActive)break;if(l.role==="user")this._chatMessages=[...this._chatMessages,l],this._charCount+=l.content.length,await this._delay(300);else{if(this._streamingMessageId=l.id,this._streamingContent="",this._chatMessages=[...this._chatMessages,{...l,content:""}],this._initialLatencyEnabled&&(this._isPaused=!0,await this._delay(1e3+Math.random()*1e3),this._isPaused=!1,!this._streamingActive))break;let s=0;for(;this._streamingActive&&s<l.content.length;){if(g>0&&Math.random()<g){const o=n+Math.random()*(i-n);if(this._isPaused=!0,await this._delay(o),this._isPaused=!1,!this._streamingActive)break}const a=Math.min(s+e,l.content.length);this._streamingContent=l.content.slice(0,a),this._chatMessages=this._chatMessages.map(o=>o.id===l.id?{...o,content:this._streamingContent}:o),this._charCount+=a-s,s=a,this._autoScrollEnabled&&this._scrollToBottom(),await this._delay(t)}this._streamingMessageId=null,await this._delay(500)}}this._stopStreaming()}_loadChatInstant(){this._stopStreaming(),this._chatMessages=en(50),this._charCount=this._chatMessages.reduce((A,e)=>A+e.content.length,0),this._streamingMessageId=null}_clearChat(){this._stopStreaming(),this._chatMessages=[],this._charCount=0,this._streamingMessageId=null,this._showScrollButton=!1}_delay(A){return new Promise(e=>setTimeout(e,A))}_handleSpeedChange(A){this._speed=A.target.value}_handleLatencyChange(A){this._latency=A.target.value}_handleInitialLatencyChange(A){this._initialLatencyEnabled=A.target.checked}_toggleControls(){this._controlsCollapsed=!this._controlsCollapsed}render(){const A=this._isPaused?"Paused (latency)":this._isStreaming?"Streaming...":"Idle";return wA`
+\`\`\``];function en(A){const e=[],t=Math.floor(A/2);for(let g=0;g<t;g++)e.push({id:g*2,role:"user",content:$g[g%$g.length]}),e.push({id:g*2+1,role:"assistant",content:An[g%An.length]});return e}let j=class extends Ee{constructor(){super(...arguments),this._scenario="streaming",this._text=CA,this._isStreaming=!1,this._charCount=CA.length,this._isPaused=!1,this._speed="normal",this._latency="heavy",this._isDark=!1,this._autoScrollEnabled=!0,this._showScrollButton=!1,this._initialLatencyEnabled=!0,this._controlsCollapsed=window.innerWidth<640,this._chatMessages=[],this._streamingMessageId=null,this._streamingContent="",this._streamingActive=!1,this._currentIndex=CA.length,this._lastContentHeight=0,this._lastTouchY=0,this._scrollButtonVisible=!1,this._scrollButtonAnimation=null,this._resizeObserver=null,this._speedPresets={"ultra-slow":[1,150],"very-slow":[1,80],slow:[2,60],normal:[4,40],fast:[10,30],"very-fast":[25,20]},this._latencyPresets={none:[0,0,0],light:[.05,200,500],medium:[.08,300,1500],heavy:[.12,500,3e3],extreme:[.15,1e3,5e3]},this._darkModeQuery=window.matchMedia("(prefers-color-scheme: dark)"),this._handleThemeChange=A=>{this._isDark=A.matches,this.classList.toggle("dark",A.matches)},this._handleKeyDown=A=>{A.key==="Escape"&&this._isStreaming?this._stopStreaming():["PageUp","ArrowUp","Home"].includes(A.key)&&this._disableAutoScroll()},this._handleWheel=A=>{A.deltaY<0&&this._disableAutoScroll()},this._handleTouchStart=A=>{A.touches.length>0&&(this._lastTouchY=A.touches[0].clientY)},this._handleTouchMove=A=>{if(A.touches.length>0){const e=A.touches[0].clientY;e-this._lastTouchY>10&&this._disableAutoScroll(),this._lastTouchY=e}},this._handleScroll=()=>{const A=this._getActiveContainer();A&&(_g(A,30)&&!this._autoScrollEnabled&&(this._autoScrollEnabled=!0),this._updateScrollButtonVisibility())},this._handleContentResize=A=>{if(this._getActiveContainer()){for(const t of A){const g=t.contentRect.height;this._isStreaming&&this._autoScrollEnabled&&g>this._lastContentHeight&&this._scrollToBottom(),this._lastContentHeight=g}this._updateScrollButtonVisibility()}}}connectedCallback(){super.connectedCallback(),this._isDark=this._darkModeQuery.matches,this.classList.toggle("dark",this._isDark),this._darkModeQuery.addEventListener("change",this._handleThemeChange),document.addEventListener("keydown",this._handleKeyDown)}firstUpdated(){this._setupScrollHandlers()}updated(A){A.has("_showScrollButton")&&this._animateScrollButton(),A.has("_scenario")&&this._setupScrollHandlers()}disconnectedCallback(){super.disconnectedCallback(),this._stopStreaming(),document.removeEventListener("keydown",this._handleKeyDown),this._darkModeQuery.removeEventListener("change",this._handleThemeChange),this._cleanupScrollHandlers(),this._resizeObserver?.disconnect(),this._resizeObserver=null}_setupScrollHandlers(){this._cleanupScrollHandlers();const A=this._getActiveContainer();A&&(A.addEventListener("wheel",this._handleWheel,{passive:!0}),A.addEventListener("touchstart",this._handleTouchStart,{passive:!0}),A.addEventListener("touchmove",this._handleTouchMove,{passive:!0}),A.addEventListener("scroll",this._handleScroll,{passive:!0}),this._resizeObserver=new ResizeObserver(this._handleContentResize),this._resizeObserver.observe(A),this._lastContentHeight=A.scrollHeight)}_cleanupScrollHandlers(){const A=[this._viewerContainer,this._chatContainer];for(const e of A)e&&(e.removeEventListener("wheel",this._handleWheel),e.removeEventListener("touchstart",this._handleTouchStart),e.removeEventListener("touchmove",this._handleTouchMove),e.removeEventListener("scroll",this._handleScroll));this._resizeObserver?.disconnect()}_getActiveContainer(){return this._scenario==="streaming"?this._viewerContainer:this._chatContainer}_scrollToBottom(){const A=this._getActiveContainer();A&&Ps(A,{dynamicTarget:!0,afterDelay:0})}_disableAutoScroll(){this._autoScrollEnabled=!1;const A=this._getActiveContainer();A&&qs(A)}_scrollToBottomAndEnable(){this._autoScrollEnabled=!0,this._showScrollButton=!1,this._scrollToBottom()}_updateScrollButtonVisibility(){const A=this._getActiveContainer();if(!A)return;const e=this._isStreaming?150:1,t=_g(A,e),g=A.scrollHeight>A.clientHeight,n=this._isStreaming&&this._autoScrollEnabled;this._showScrollButton=g&&!t&&!n}_animateScrollButton(){this._scrollButton&&(this._scrollButtonAnimation?.pause(),this._scrollButtonAnimation=null,this._showScrollButton&&!this._scrollButtonVisible?(this._scrollButtonVisible=!0,this._scrollButton.classList.add("visible"),this._scrollButtonAnimation=qg(this._scrollButton,{opacity:[0,1],translateY:["1rem","0rem"],duration:250,ease:"outCubic"})):!this._showScrollButton&&this._scrollButtonVisible&&(this._scrollButtonAnimation=qg(this._scrollButton,{opacity:[1,0],translateY:["0rem","1rem"],duration:200,ease:"inCubic",onComplete:()=>{this._scrollButtonVisible=!1,this._scrollButton?.classList.remove("visible")}})))}_switchScenario(A){this._scenario!==A&&(this._stopStreaming(),this._scenario=A,this._showScrollButton=!1,this._autoScrollEnabled=!0,A==="chat"?(this._chatMessages=[],this._streamingMessageId=null,this._streamingContent=""):(this._text=CA,this._charCount=CA.length,this._currentIndex=CA.length))}async _startStreaming(){if(this._streamingActive||(this._viewer?.reset(),this._text="",this._currentIndex=0,this._charCount=0,this._isStreaming=!0,this._streamingActive=!0,this._autoScrollEnabled=!0,this._lastContentHeight=0,this._initialLatencyEnabled&&(this._isPaused=!0,await this._delay(2e3),this._isPaused=!1,!this._streamingActive)))return;const[A,e]=this._speedPresets[this._speed],[t,g,n]=this._latencyPresets[this._latency];for(;this._streamingActive&&this._currentIndex<CA.length;){if(t>0&&Math.random()<t){const l=g+Math.random()*(n-g);if(this._isPaused=!0,await this._delay(l),this._isPaused=!1,!this._streamingActive)break}const i=Math.min(this._currentIndex+A,CA.length);this._text=CA.slice(0,i),this._charCount=i,this._currentIndex=i,this._autoScrollEnabled&&this._scrollToBottom(),await this._delay(e)}this._stopStreaming()}_stopStreaming(){this._streamingActive=!1,this._isStreaming=!1,this._isPaused=!1,this._streamingMessageId=null}_loadInstant(){this._stopStreaming(),this._viewer?.reset(),this._text=CA,this._charCount=CA.length,this._currentIndex=CA.length}_clear(){this._stopStreaming(),this._viewer?.reset(),this._text="",this._charCount=0,this._currentIndex=0,this._lastContentHeight=0,this._showScrollButton=!1}async _startChatSimulation(){if(this._streamingActive)return;this._chatMessages=[],this._streamingActive=!0,this._isStreaming=!0,this._autoScrollEnabled=!0,this._charCount=0;const A=en(50),[e,t]=this._speedPresets[this._speed],[g,n,i]=this._latencyPresets[this._latency];for(const l of A){if(!this._streamingActive)break;if(l.role==="user")this._chatMessages=[...this._chatMessages,l],this._charCount+=l.content.length,await this._delay(300);else{if(this._streamingMessageId=l.id,this._streamingContent="",this._chatMessages=[...this._chatMessages,{...l,content:""}],this._initialLatencyEnabled&&(this._isPaused=!0,await this._delay(1e3+Math.random()*1e3),this._isPaused=!1,!this._streamingActive))break;let s=0;for(;this._streamingActive&&s<l.content.length;){if(g>0&&Math.random()<g){const o=n+Math.random()*(i-n);if(this._isPaused=!0,await this._delay(o),this._isPaused=!1,!this._streamingActive)break}const a=Math.min(s+e,l.content.length);this._streamingContent=l.content.slice(0,a),this._chatMessages=this._chatMessages.map(o=>o.id===l.id?{...o,content:this._streamingContent}:o),this._charCount+=a-s,s=a,this._autoScrollEnabled&&this._scrollToBottom(),await this._delay(t)}this._streamingMessageId=null,await this._delay(500)}}this._stopStreaming()}_loadChatInstant(){this._stopStreaming(),this._chatMessages=en(50),this._charCount=this._chatMessages.reduce((A,e)=>A+e.content.length,0),this._streamingMessageId=null}_clearChat(){this._stopStreaming(),this._chatMessages=[],this._charCount=0,this._streamingMessageId=null,this._showScrollButton=!1}_delay(A){return new Promise(e=>setTimeout(e,A))}_handleScenarioChange(A){const e=A.target.value;this._switchScenario(e)}_handleSpeedChange(A){this._speed=A.target.value}_handleLatencyChange(A){this._latency=A.target.value}_handleInitialLatencyChange(A){this._initialLatencyEnabled=A.target.checked}_toggleControls(){this._controlsCollapsed=!this._controlsCollapsed}render(){const A=this._isPaused?"Paused (latency)":this._isStreaming?"Streaming...":"Idle";return wA`
       <div class="container">
         <header>
           <h1>Markdown Viewer Demo</h1>
@@ -2006,21 +2006,20 @@ function process(data: any): any {
           </p>
         </header>
 
-        <div class="scenario-tabs">
-          <button
-            class="scenario-tab ${this._scenario==="streaming"?"active":""}"
-            @click=${()=>this._switchScenario("streaming")}
+        <div class="scenario-selector">
+          <label for="scenario">Scenario:</label>
+          <select
+            id="scenario"
+            @change=${this._handleScenarioChange}
             ?disabled=${this._isStreaming}
           >
-            📄 Single Document
-          </button>
-          <button
-            class="scenario-tab ${this._scenario==="chat"?"active":""}"
-            @click=${()=>this._switchScenario("chat")}
-            ?disabled=${this._isStreaming}
-          >
-            💬 AI Chat (50 messages)
-          </button>
+            <option value="streaming" ?selected=${this._scenario==="streaming"}>
+              📄 Single Document Streaming
+            </option>
+            <option value="chat" ?selected=${this._scenario==="chat"}>
+              💬 AI Chat (50 messages)
+            </option>
+          </select>
         </div>
 
         ${this._scenario==="streaming"?this._renderStreamingControls():this._renderChatControls()}
@@ -2237,34 +2236,35 @@ function process(data: any): any {
       font-size: 0.875rem;
     }
 
-    /* Scenario Tabs */
-    .scenario-tabs {
+    /* Scenario Selector */
+    .scenario-selector {
       display: flex;
+      align-items: center;
       gap: 0.5rem;
       margin-bottom: 1rem;
     }
 
-    .scenario-tab {
-      padding: 0.5rem 1rem;
+    .scenario-selector label {
       font-size: 0.875rem;
       font-weight: 500;
+      color: #64748b;
+    }
+
+    .scenario-selector select {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
       border: 1px solid #e2e8f0;
       border-radius: 0.375rem;
       background-color: #ffffff;
-      color: #64748b;
+      color: #1e293b;
       cursor: pointer;
-      transition: all 0.15s ease;
+      min-width: 200px;
     }
 
-    .scenario-tab:hover {
-      background-color: #f8fafc;
-      border-color: #cbd5e1;
-    }
-
-    .scenario-tab.active {
-      background-color: #3b82f6;
+    .scenario-selector select:focus {
+      outline: none;
       border-color: #3b82f6;
-      color: white;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     }
 
     .controls {
@@ -2623,20 +2623,14 @@ function process(data: any): any {
       color: #94a3b8;
     }
 
-    :host(.dark) .scenario-tab {
-      background-color: #1e293b;
-      border-color: #334155;
+    :host(.dark) .scenario-selector label {
       color: #94a3b8;
     }
 
-    :host(.dark) .scenario-tab:hover {
+    :host(.dark) .scenario-selector select {
       background-color: #334155;
-    }
-
-    :host(.dark) .scenario-tab.active {
-      background-color: #3b82f6;
-      border-color: #3b82f6;
-      color: white;
+      border-color: #475569;
+      color: #f1f5f9;
     }
 
     :host(.dark) .controls,
