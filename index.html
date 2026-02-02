@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/lit-markdown-viewer/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
     <title>Markdown Viewer - Lit Demo</title>
     <style>
       * {
@@ -12,13 +14,32 @@
         box-sizing: border-box;
       }
 
-      body {
+      html, body {
+        height: 100%;
+        overflow: hidden;
+        background-color: #f8fafc;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
+
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+
+      demo-page {
+        flex: 1;
+        min-height: 0;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        html, body {
+          background-color: #0f172a;
+        }
+      }
     </style>
-    <script type="module" crossorigin src="/lit-markdown-viewer/assets/index-DH3BKfNV.js"></script>
+    <script type="module" crossorigin src="/lit-markdown-viewer/assets/index-CIaRPp6r.js"></script>
   </head>
   <body>
     <demo-page></demo-page>
