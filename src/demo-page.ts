@@ -435,34 +435,35 @@ export class DemoPage extends LitElement {
       font-size: 0.875rem;
     }
 
-    /* Scenario Tabs */
-    .scenario-tabs {
+    /* Scenario Selector */
+    .scenario-selector {
       display: flex;
+      align-items: center;
       gap: 0.5rem;
       margin-bottom: 1rem;
     }
 
-    .scenario-tab {
-      padding: 0.5rem 1rem;
+    .scenario-selector label {
       font-size: 0.875rem;
       font-weight: 500;
+      color: #64748b;
+    }
+
+    .scenario-selector select {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
       border: 1px solid #e2e8f0;
       border-radius: 0.375rem;
       background-color: #ffffff;
-      color: #64748b;
+      color: #1e293b;
       cursor: pointer;
-      transition: all 0.15s ease;
+      min-width: 200px;
     }
 
-    .scenario-tab:hover {
-      background-color: #f8fafc;
-      border-color: #cbd5e1;
-    }
-
-    .scenario-tab.active {
-      background-color: #3b82f6;
+    .scenario-selector select:focus {
+      outline: none;
       border-color: #3b82f6;
-      color: white;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     }
 
     .controls {
@@ -821,20 +822,14 @@ export class DemoPage extends LitElement {
       color: #94a3b8;
     }
 
-    :host(.dark) .scenario-tab {
-      background-color: #1e293b;
-      border-color: #334155;
+    :host(.dark) .scenario-selector label {
       color: #94a3b8;
     }
 
-    :host(.dark) .scenario-tab:hover {
+    :host(.dark) .scenario-selector select {
       background-color: #334155;
-    }
-
-    :host(.dark) .scenario-tab.active {
-      background-color: #3b82f6;
-      border-color: #3b82f6;
-      color: white;
+      border-color: #475569;
+      color: #f1f5f9;
     }
 
     :host(.dark) .controls,
@@ -1377,6 +1372,11 @@ export class DemoPage extends LitElement {
   // UI Event Handlers
   // ─────────────────────────────────────────────────────────────────────────────
 
+  private _handleScenarioChange(e: Event): void {
+    const scenario = (e.target as HTMLSelectElement).value as Scenario;
+    this._switchScenario(scenario);
+  }
+
   private _handleSpeedChange(e: Event): void {
     this._speed = (e.target as HTMLSelectElement).value;
   }
@@ -1413,21 +1413,20 @@ export class DemoPage extends LitElement {
           </p>
         </header>
 
-        <div class="scenario-tabs">
-          <button
-            class="scenario-tab ${this._scenario === 'streaming' ? 'active' : ''}"
-            @click=${() => this._switchScenario('streaming')}
+        <div class="scenario-selector">
+          <label for="scenario">Scenario:</label>
+          <select
+            id="scenario"
+            @change=${this._handleScenarioChange}
             ?disabled=${this._isStreaming}
           >
-            📄 Single Document
-          </button>
-          <button
-            class="scenario-tab ${this._scenario === 'chat' ? 'active' : ''}"
-            @click=${() => this._switchScenario('chat')}
-            ?disabled=${this._isStreaming}
-          >
-            💬 AI Chat (50 messages)
-          </button>
+            <option value="streaming" ?selected=${this._scenario === 'streaming'}>
+              📄 Single Document Streaming
+            </option>
+            <option value="chat" ?selected=${this._scenario === 'chat'}>
+              💬 AI Chat (50 messages)
+            </option>
+          </select>
         </div>
 
         ${this._scenario === 'streaming' ? this._renderStreamingControls() : this._renderChatControls()}
