@@ -352,10 +352,23 @@ Run unit tests:
 npm test
 ```
 
+Run component tests (browser):
+
+```bash
+npm run test:component
+```
+
+Run all tests:
+
+```bash
+npm run test:all
+```
+
 Run tests in watch mode:
 
 ```bash
-npm run test:watch
+npm run test:watch           # Unit tests
+npm run test:component:watch # Component tests
 ```
 
 Run tests with coverage:
@@ -368,12 +381,14 @@ npm run test:coverage
 
 ```
 tests/
-└── unit/
-    ├── cache-manager.test.ts    # LRU cache tests
-    ├── cursor-controller.test.ts # Cursor blink state tests
-    ├── parser.test.ts           # Markdown rendering tests
-    ├── animate-scroll.test.ts   # Scroll utility tests
-    └── utils.test.ts            # HTML decode tests
+├── unit/                        # Node environment
+│   ├── cache-manager.test.ts    # LRU cache tests
+│   ├── cursor-controller.test.ts # Cursor blink state tests
+│   ├── parser.test.ts           # Markdown rendering tests
+│   ├── animate-scroll.test.ts   # Scroll utility tests
+│   └── utils.test.ts            # HTML decode tests
+└── component/                   # Browser environment (Playwright)
+    └── markdown-viewer.test.ts  # Component rendering, streaming, focus tests
 ```
 
 ## Browser Support
