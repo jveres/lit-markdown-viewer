@@ -180,7 +180,7 @@ npm run bench:browser  # Morph baseline
 
 ### Phase 1: Quick Wins
 - [x] 1.1 Adaptive throttling ✅ (2026-02-02)
-- [ ] 1.2 KaTeX cache tuning
+- [x] 1.2 KaTeX lazy loading ✅ (2026-02-02) - replaced cache tuning with lazy load
 - [ ] 1.3 Debounce at end of stream
 
 ### Phase 2: Core Optimizations
@@ -214,6 +214,14 @@ npm run bench:browser  # Morph baseline
   - Max morph: 137ms
   - Avg morph: 35ms
   - Streaming remained smooth despite slow device
+
+### KaTeX Lazy Loading (2026-02-02)
+- **Implementation:** Dynamic import() for code splitting
+- **Bundle split:**
+  - Before: Single 1051KB bundle (507KB gzip)
+  - After: Main 787KB (430KB gzip) + KaTeX 265KB (77KB gzip)
+- **Savings:** 264KB (77KB gzip) for pages without math
+- **Behavior:** Shows styled placeholder while KaTeX loads, re-renders when ready
 
 ### [Future entries will be added here]
 
