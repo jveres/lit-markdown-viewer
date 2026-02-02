@@ -102,6 +102,11 @@ export class MarkdownViewer extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('click', this._handleClick);
+
+    // Make component focusable for cursor styling
+    if (!this.hasAttribute('tabindex')) {
+      this.setAttribute('tabindex', '0');
+    }
   }
 
   override disconnectedCallback(): void {
@@ -113,9 +118,10 @@ export class MarkdownViewer extends LitElement {
   }
 
   override willUpdate(changedProperties: PropertyValues): void {
-    // Latch streaming state
+    // Latch streaming state and focus when streaming starts
     if (changedProperties.has('isStreaming') && this.isStreaming) {
       this._hasStreamed = true;
+      this.focus();
     }
 
     // Handle throttling when text or streaming state changes

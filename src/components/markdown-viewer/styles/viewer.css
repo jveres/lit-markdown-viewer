@@ -476,3 +476,10 @@
   animation: none;
   opacity: 1;
 }
+
+/* When component is not focused, show hollow frame cursor */
+:host(:not(:focus)) .markdown .cursor::after {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--cursor-color);
+  filter: drop-shadow(0 0 4px var(--cursor-color));
+}

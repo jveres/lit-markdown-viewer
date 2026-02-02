@@ -15,7 +15,7 @@ A high-performance Lit Web Component for rendering markdown with streaming suppo
 - **Math Rendering** - KaTeX support for inline (`$...$`) and block (`$$...$$`) math
 - **GitHub Flavored Markdown** - Tables, task lists, strikethrough, alerts, footnotes
 - **Smart Caching** - LRU caches for rendered content, KaTeX output, and DOM state
-- **Cursor Animation** - Blinking cursor during streaming with idle detection and empty content waiting state
+- **Cursor Animation** - Blinking cursor during streaming with focus-aware styling (solid when focused, hollow frame when unfocused)
 - **Dark Mode** - Full dark theme support via CSS class
 
 ## Installation
@@ -69,6 +69,7 @@ render() {
 | `text`         | `string`  | `''`    | Markdown source text                        |
 | `is-streaming` | `boolean` | `false` | Enable streaming mode (throttling + cursor) |
 | `throttle-ms`  | `number`  | `50`    | Minimum ms between updates during streaming |
+| `tabindex`     | `string`  | `'0'`   | Auto-set to make component focusable        |
 
 ## Methods
 
@@ -206,6 +207,8 @@ controller.destroy(); // Cleanup
 - Starts blinking after 500ms idle
 - Uses CSS animation toggling to restart blink cycle
 - Immediate blinking (no delay) when waiting for content via `setBlinking()`
+- Focus-aware styling: solid cursor when focused, hollow frame when unfocused (like terminal emulators)
+- Component auto-focuses when streaming starts
 
 ## Streaming Optimization
 
@@ -313,6 +316,17 @@ Add `dark` class to enable dark theme:
 ```html
 <markdown-viewer class="dark" .text="${content}"></markdown-viewer>
 ```
+
+### Cursor Focus Styling
+
+The cursor changes appearance based on component focus state:
+
+| State     | Cursor Style                    |
+| --------- | ------------------------------- |
+| Focused   | Solid filled block with glow   |
+| Unfocused | Hollow frame (outline only)    |
+
+The component auto-focuses when streaming starts. Click elsewhere or tab away to see the hollow cursor.
 
 ## Performance Tips
 
