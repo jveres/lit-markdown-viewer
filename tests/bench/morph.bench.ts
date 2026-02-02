@@ -7,7 +7,6 @@
 import { bench, describe } from 'vitest';
 import { renderMarkdown } from '../../src/components/markdown-viewer/parser';
 import { morphContentSync, resetMorphCache } from '../../src/components/markdown-viewer/morph';
-import { cacheManager } from '../../src/components/markdown-viewer/cache-manager';
 
 // =============================================================================
 // Content Generators
@@ -94,7 +93,6 @@ function withContainer(fn: (container: HTMLDivElement) => void): void {
   document.body.appendChild(el);
   
   resetMorphCache();
-  cacheManager.morphCache.clear();
   
   fn(el);
   

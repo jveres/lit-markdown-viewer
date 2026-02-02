@@ -112,38 +112,35 @@ class CacheManager {
   // Separate KaTeX caches for display/inline modes (avoids key concatenation)
   readonly katexCacheDisplay: LRUCache<string>;
   readonly katexCacheInline: LRUCache<string>;
-  readonly morphCache: LRUCache<string>;
 
   constructor(memoryBudget = DEFAULT_MEMORY_BUDGET) {
     this.memoryBudget = memoryBudget;
 
-    // Allocate budget: 25% render sync, 25% render async, 20% katex display, 20% katex inline, 10% morph
+    // Allocate budget: 25% render sync, 25% render async, 25% katex display, 25% katex inline
+    // Note: morph state moved to WeakMap in morph.ts for per-instance isolation
     this.renderCacheSync = new LRUCache<string>(100, memoryBudget * 0.25);
     this.renderCacheAsync = new LRUCache<string>(100, memoryBudget * 0.25);
-    this.katexCacheDisplay = new LRUCache<string>(250, memoryBudget * 0.20);
-    this.katexCacheInline = new LRUCache<string>(250, memoryBudget * 0.20);
-    this.morphCache = new LRUCache<string>(10, memoryBudget * 0.1);
+    this.katexCacheDisplay = new LRUCache<string>(250, memoryBudget * 0.25);
+    this.katexCacheInline = new LRUCache<string>(250, memoryBudget * 0.25);
   }
 
   /**
    * Get combined stats for all caches
    */
-  get stats(): { renderSync: CacheStats; renderAsync: CacheStats; katexDisplay: CacheStats; katexInline: CacheStats; morph: CacheStats; total: CacheStats } {
+  get stats(): { renderSync: CacheStats; renderAsync: CacheStats; katexDisplay: CacheStats; katexInline: CacheStats; total: CacheStats } {
     const renderSync = this.renderCacheSync.stats;
     const renderAsync = this.renderCacheAsync.stats;
     const katexDisplay = this.katexCacheDisplay.stats;
     const katexInline = this.katexCacheInline.stats;
-    const morph = this.morphCache.stats;
 
     return {
       renderSync,
       renderAsync,
       katexDisplay,
       katexInline,
-      morph,
       total: {
-        entries: renderSync.entries + renderAsync.entries + katexDisplay.entries + katexInline.entries + morph.entries,
-        estimatedBytes: renderSync.estimatedBytes + renderAsync.estimatedBytes + katexDisplay.estimatedBytes + katexInline.estimatedBytes + morph.estimatedBytes
+        entries: renderSync.entries + renderAsync.entries + katexDisplay.entries + katexInline.entries,
+        estimatedBytes: renderSync.estimatedBytes + renderAsync.estimatedBytes + katexDisplay.estimatedBytes + katexInline.estimatedBytes
       }
     };
   }
@@ -156,7 +153,6 @@ class CacheManager {
     this.renderCacheAsync.clear();
     this.katexCacheDisplay.clear();
     this.katexCacheInline.clear();
-    this.morphCache.clear();
   }
 
   /**
@@ -166,14 +162,11 @@ class CacheManager {
   trimIfNeeded(): void {
     const { total } = this.stats;
     if (total.estimatedBytes > this.memoryBudget * 0.9) {
-      // Evict oldest entries by clearing and letting natural re-population occur
-      // This is simpler than surgical eviction and works well for LRU caches
       const caches = [
         this.renderCacheSync,
         this.renderCacheAsync,
         this.katexCacheDisplay,
         this.katexCacheInline,
-        this.morphCache
       ];
 
       for (const cache of caches) {

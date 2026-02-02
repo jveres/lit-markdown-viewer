@@ -228,14 +228,15 @@ Centralized LRU cache with memory budget (~10MB default):
 | ------------------- | -------------------------- | ------ | ----------- |
 | `renderCacheSync`   | Sync-strategy HTML output  | 25%    | 100         |
 | `renderCacheAsync`  | Async-strategy HTML output | 25%    | 100         |
-| `katexCacheDisplay` | Block math output          | 20%    | 250         |
-| `katexCacheInline`  | Inline math output         | 20%    | 250         |
-| `morphCache`        | DOM state hashes           | 10%    | 10          |
+| `katexCacheDisplay` | Block math output          | 25%    | 250         |
+| `katexCacheInline`  | Inline math output         | 25%    | 250         |
+
+> Note: Morph state is per-instance via WeakMap (not in shared cache) for multi-viewer isolation.
 
 ```typescript
 // Access stats
 cacheManager.stats;
-// → { renderSync, renderAsync, katexDisplay, katexInline, morph, total }
+// → { renderSync, renderAsync, katexDisplay, katexInline, total }
 
 // Manual cleanup
 cacheManager.clearAll();
