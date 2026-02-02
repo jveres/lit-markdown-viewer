@@ -137,12 +137,16 @@ export class MarkdownViewer extends LitElement {
       if (this.isStreaming) {
         this._hasStreamed = true;
         this._resetStreamingStats();
-        this._ensureKaTeXLoaded();
         this.focus();
       } else if (changedProperties.get('isStreaming') === true) {
         // Streaming just ended
         this._logStreamingStats();
       }
+    }
+
+    // Ensure KaTeX is loaded when content changes (handles both streaming and static)
+    if (changedProperties.has('text') && this.text) {
+      this._ensureKaTeXLoaded();
     }
 
     // Handle throttling when text or streaming state changes
@@ -161,6 +165,9 @@ export class MarkdownViewer extends LitElement {
       // Clear memoization cache to force re-render with KaTeX
       this._lastSource = '';
       this._lastResult = '';
+      // Clear global render cache too (may have placeholders cached)
+      cacheManager.renderCacheSync.clear();
+      cacheManager.renderCacheAsync.clear();
       // Trigger update if we have content
       if (this.text) {
         this.requestUpdate();

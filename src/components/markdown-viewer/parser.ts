@@ -18,7 +18,8 @@ export function preloadKaTeX(): Promise<void> {
   if (katexModule) return Promise.resolve();
   if (!katexLoadPromise) {
     katexLoadPromise = import('katex').then((mod) => {
-      katexModule = mod.default ? { renderToString: mod.default.renderToString } as KaTeXModule : mod;
+      // KaTeX exports renderToString both directly and on default
+      katexModule = mod.default || mod;
       return katexModule;
     });
   }
