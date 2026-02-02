@@ -1,8 +1,11 @@
 // @ts-expect-error missing types for idiomorph
 import Idiomorph from 'idiomorph/dist/idiomorph.cjs.js';
-import { cacheManager } from './cache-manager';
 
-// Use a simple hash for faster comparison than full string
+// --------------------------------------------------------------------------
+// Hashing Utility
+// --------------------------------------------------------------------------
+
+/** Simple djb2 hash for fast string comparison */
 function simpleHash(str: string): string {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -11,13 +14,52 @@ function simpleHash(str: string): string {
   return `${str.length}:${hash >>> 0}`;
 }
 
-// Shared Idiomorph configuration
+// --------------------------------------------------------------------------
+// Per-Instance State (WeakMap for automatic cleanup)
+// --------------------------------------------------------------------------
+
+interface MorphStats {
+  updated: number;
+  skipped: number;
+  added: number;
+  removed: number;
+}
+
+interface ElementMorphState {
+  /** Previous element hashes for diff comparison */
+  prevHashes: string[];
+  /** Last content hash for full-morph skip detection */
+  contentHash: string;
+  /** Stats from last morph operation */
+  lastStats: MorphStats;
+}
+
+/** Per-container morph state - auto-cleaned when element is GC'd */
+const morphStates = new WeakMap<Element, ElementMorphState>();
+
+/** Get or create state for a container */
+function getState(container: Element): ElementMorphState {
+  let state = morphStates.get(container);
+  if (!state) {
+    state = {
+      prevHashes: [],
+      contentHash: '',
+      lastStats: { updated: 0, skipped: 0, added: 0, removed: 0 }
+    };
+    morphStates.set(container, state);
+  }
+  return state;
+}
+
+// --------------------------------------------------------------------------
+// Shared Idiomorph Configuration
+// --------------------------------------------------------------------------
+
 const IDIOMORPH_OPTIONS = {
   morphStyle: 'innerHTML' as const,
   callbacks: {
-    // This hook fires before Idiomorph deletes a node
+    // Prevent removal of nodes with data-morph-ignore attribute
     beforeNodeRemoved: (node: Node) => {
-      // If the node has our special "ignore" attribute, return false to prevent removal
       if (node instanceof Element && node.hasAttribute('data-morph-ignore')) {
         return false;
       }
@@ -26,6 +68,10 @@ const IDIOMORPH_OPTIONS = {
   }
 };
 
+// --------------------------------------------------------------------------
+// RAF-Batched Morphing (for non-streaming updates)
+// --------------------------------------------------------------------------
+
 // Track pending RAF to avoid stacking
 let pendingMorph: number | null = null;
 let pendingElement: Element | null = null;
@@ -33,17 +79,17 @@ let pendingHtml: string | null = null;
 
 /**
  * Morph the content of an element using Idiomorph
- * Prevents full re-renders and preserves text selection
  * Uses requestAnimationFrame to batch updates and prevent jank
+ * 
+ * @param element The container element to morph
+ * @param newHtml The new HTML content
  */
 export function morphContent(element: Element, newHtml: string): void {
   const newHash = simpleHash(newHtml);
+  const state = getState(element);
   
-  // Fast path: check hash in cache
-  const cacheKey = 'morph:last';
-  const lastHash = cacheManager.morphCache.get(cacheKey);
-  
-  if (lastHash === newHash) return;
+  // Fast path: skip if content unchanged
+  if (state.contentHash === newHash) return;
   
   // Store for pending morph
   pendingElement = element;
@@ -56,8 +102,8 @@ export function morphContent(element: Element, newHtml: string): void {
   
   pendingMorph = requestAnimationFrame(() => {
     if (pendingElement && pendingHtml !== null) {
-      // Update cache before morph
-      cacheManager.morphCache.set(cacheKey, newHash);
+      const pendingState = getState(pendingElement);
+      pendingState.contentHash = newHash;
       Idiomorph.morph(pendingElement, pendingHtml, IDIOMORPH_OPTIONS);
     }
     
@@ -68,25 +114,32 @@ export function morphContent(element: Element, newHtml: string): void {
 }
 
 /**
- * Morph content synchronously (for cases where immediate update is needed)
+ * Morph content synchronously (for testing or immediate updates)
+ * 
+ * @param element The container element to morph
+ * @param newHtml The new HTML content
  */
 export function morphContentSync(element: Element, newHtml: string): void {
   const newHash = simpleHash(newHtml);
-  const cacheKey = 'morph:last';
-  const lastHash = cacheManager.morphCache.get(cacheKey);
+  const state = getState(element);
   
-  if (lastHash === newHash) return;
+  // Fast path: skip if content unchanged
+  if (state.contentHash === newHash) return;
   
-  cacheManager.morphCache.set(cacheKey, newHash);
+  state.contentHash = newHash;
   Idiomorph.morph(element, newHtml, IDIOMORPH_OPTIONS);
 }
 
 /**
- * Reset the morph cache (useful when switching content sources)
+ * Reset morph state for a specific container, or clear all pending operations
+ * 
+ * @param container Optional container to reset state for
  */
-export function resetMorphCache(): void {
-  cacheManager.morphCache.clear();
-  resetElementMorphState();
+export function resetMorphCache(container?: Element): void {
+  if (container) {
+    // Reset specific container's state
+    morphStates.delete(container);
+  }
   
   // Cancel any pending morph
   if (pendingMorph !== null) {
@@ -98,20 +151,21 @@ export function resetMorphCache(): void {
 }
 
 // --------------------------------------------------------------------------
-// Element-Level Optimized Morphing (Option A: Hybrid approach)
+// Element-Level Optimized Morphing (for streaming)
 // --------------------------------------------------------------------------
 
-/** Previous element hashes for diff comparison */
-let prevElementHashes: string[] = [];
-
-/** Stats for debugging */
-let lastMorphStats = { updated: 0, skipped: 0, added: 0, removed: 0 };
-
 /**
- * Get last morph stats (for debugging/logging)
+ * Get morph stats for a specific container
+ * 
+ * @param container The container to get stats for
+ * @returns Stats from the last morph operation on this container
  */
-export function getMorphStats() {
-  return lastMorphStats;
+export function getMorphStats(container?: Element): MorphStats {
+  if (!container) {
+    // Fallback for backwards compatibility - return empty stats
+    return { updated: 0, skipped: 0, added: 0, removed: 0 };
+  }
+  return getState(container).lastStats;
 }
 
 /**
@@ -120,7 +174,7 @@ export function getMorphStats() {
  * Strategy:
  * 1. Parse new HTML into temp container
  * 2. Hash each top-level element
- * 3. Compare with previous hashes
+ * 3. Compare with previous hashes for this container
  * 4. Only morph elements that changed
  * 
  * @param container The container element to morph
@@ -128,12 +182,14 @@ export function getMorphStats() {
  * @returns true if any elements were updated
  */
 export function morphContentOptimized(container: Element, newHtml: string): boolean {
+  const state = getState(container);
+  
   // Parse new HTML into temp container
   const temp = document.createElement('div');
   temp.innerHTML = newHtml;
   
   const newHashes: string[] = [];
-  const stats = { updated: 0, skipped: 0, added: 0, removed: 0 };
+  const stats: MorphStats = { updated: 0, skipped: 0, added: 0, removed: 0 };
   
   const oldLen = container.children.length;
   const newLen = temp.children.length;
@@ -158,7 +214,7 @@ export function morphContentOptimized(container: Element, newHtml: string): bool
       // New element - append (clone since temp will be discarded)
       container.appendChild(newChild.cloneNode(true));
       stats.added++;
-    } else if (prevElementHashes[i] !== newHash) {
+    } else if (state.prevHashes[i] !== newHash) {
       // Element changed - morph it
       Idiomorph.morph(oldChild, newChild.outerHTML, {
         morphStyle: 'outerHTML' as const,
@@ -177,16 +233,21 @@ export function morphContentOptimized(container: Element, newHtml: string): bool
     stats.removed++;
   }
   
-  prevElementHashes = newHashes;
-  lastMorphStats = stats;
+  // Update state for this container
+  state.prevHashes = newHashes;
+  state.lastStats = stats;
   
   return stats.updated > 0 || stats.added > 0 || stats.removed > 0;
 }
 
 /**
- * Reset element-level morph state
+ * Reset element-level morph state for a container
+ * Note: Usually not needed since WeakMap auto-cleans when element is GC'd
+ * 
+ * @param container Optional container to reset (if omitted, does nothing - use resetMorphCache)
  */
-export function resetElementMorphState(): void {
-  prevElementHashes = [];
-  lastMorphStats = { updated: 0, skipped: 0, added: 0, removed: 0 };
+export function resetElementMorphState(container?: Element): void {
+  if (container) {
+    morphStates.delete(container);
+  }
 }

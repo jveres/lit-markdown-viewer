@@ -20,12 +20,12 @@ describe('morph', () => {
     
     // Clear caches
     cacheManager.clearAll();
-    resetMorphCache();
+    resetMorphCache(container);
   });
 
   afterEach(() => {
+    resetMorphCache(container);
     container.remove();
-    resetMorphCache();
   });
 
   describe('morphContentSync', () => {
@@ -177,16 +177,22 @@ describe('morph', () => {
   });
 
   describe('resetMorphCache', () => {
-    it('should clear the morph cache', () => {
+    it('should clear per-element state', () => {
       morphContentSync(container, '<p>Content</p>');
       
-      // Cache should have the hash
-      expect(cacheManager.morphCache.stats.entries).toBeGreaterThan(0);
+      // Modify container directly
+      container.innerHTML = '<p>Modified</p>';
       
-      resetMorphCache();
+      // Same content morph would be skipped due to per-element hash
+      morphContentSync(container, '<p>Content</p>');
+      expect(container.innerHTML).toBe('<p>Modified</p>');
       
-      // Cache should be empty
-      expect(cacheManager.morphCache.stats.entries).toBe(0);
+      // Reset clears the state
+      resetMorphCache(container);
+      
+      // Now morph should work again
+      morphContentSync(container, '<p>Content</p>');
+      expect(container.innerHTML).toBe('<p>Content</p>');
     });
 
     it('should allow re-morphing same content after reset', () => {
@@ -203,7 +209,7 @@ describe('morph', () => {
       expect(container.innerHTML).toBe('<p>Modified</p>');
       
       // Reset cache
-      resetMorphCache();
+      resetMorphCache(container);
       
       // Now morph should work
       morphContentSync(container, html);
@@ -214,23 +220,46 @@ describe('morph', () => {
       morphContent(container, '<p>Pending</p>');
       
       // Reset before RAF fires
-      resetMorphCache();
+      resetMorphCache(container);
       
       await new Promise(resolve => requestAnimationFrame(resolve));
       
       // Pending morph should have been cancelled
       expect(container.innerHTML).toBe('');
     });
+    
+    it('should only reset state for specified container', () => {
+      const container2 = document.createElement('div');
+      document.body.appendChild(container2);
+      
+      // Set up both containers
+      morphContentSync(container, '<p>A</p>');
+      morphContentSync(container2, '<p>B</p>');
+      
+      // Modify both
+      container.innerHTML = '<p>Modified A</p>';
+      container2.innerHTML = '<p>Modified B</p>';
+      
+      // Reset only container1
+      resetMorphCache(container);
+      
+      // Container1 can be re-morphed
+      morphContentSync(container, '<p>A</p>');
+      expect(container.innerHTML).toBe('<p>A</p>');
+      
+      // Container2 is still cached (morph skipped)
+      morphContentSync(container2, '<p>B</p>');
+      expect(container2.innerHTML).toBe('<p>Modified B</p>');
+      
+      container2.remove();
+    });
   });
 
   describe('hash collision handling', () => {
     it('should morph different content with same length', () => {
-      // Different content, same length
+      // Different content, same length - djb2 hash should differentiate
       morphContentSync(container, '<p>AAAA</p>');
       expect(container.innerHTML).toBe('<p>AAAA</p>');
-      
-      // Reset to clear cache
-      resetMorphCache();
       
       morphContentSync(container, '<p>BBBB</p>');
       expect(container.innerHTML).toBe('<p>BBBB</p>');
@@ -269,7 +298,7 @@ describe('morph', () => {
 
   describe('morphContentOptimized', () => {
     beforeEach(() => {
-      resetElementMorphState();
+      resetElementMorphState(container);
     });
 
     describe('basic element-level skipping', () => {
@@ -280,7 +309,7 @@ describe('morph', () => {
         // Same content - should skip all
         morphContentOptimized(container, html1);
         
-        const stats = getMorphStats();
+        const stats = getMorphStats(container);
         expect(stats.skipped).toBe(2);
         expect(stats.updated).toBe(0);
       });
@@ -291,7 +320,7 @@ describe('morph', () => {
         // Change only middle element
         morphContentOptimized(container, '<p>A</p><p>B-changed</p><p>C</p>');
         
-        const stats = getMorphStats();
+        const stats = getMorphStats(container);
         expect(stats.updated).toBe(1);
         expect(stats.skipped).toBe(2);
       });
@@ -302,7 +331,7 @@ describe('morph', () => {
         // Add second element
         morphContentOptimized(container, '<p>First</p><p>Second</p>');
         
-        const stats = getMorphStats();
+        const stats = getMorphStats(container);
         expect(stats.skipped).toBe(1);
         expect(stats.added).toBe(1);
       });
@@ -313,7 +342,7 @@ describe('morph', () => {
         // Remove last element
         morphContentOptimized(container, '<p>A</p><p>B</p>');
         
-        const stats = getMorphStats();
+        const stats = getMorphStats(container);
         expect(stats.removed).toBe(1);
         expect(container.children.length).toBe(2);
       });
@@ -333,7 +362,7 @@ describe('morph', () => {
         expect(container.querySelector('#p1')).toBe(originalP1);
         
         // Stats should show skip
-        expect(getMorphStats().skipped).toBe(1);
+        expect(getMorphStats(container).skipped).toBe(1);
       });
 
       it('should preserve event listeners on skipped elements', () => {
@@ -378,7 +407,7 @@ describe('morph', () => {
         
         for (const html of updates) {
           morphContentOptimized(container, html);
-          const stats = getMorphStats();
+          const stats = getMorphStats(container);
           totalSkipped += stats.skipped;
           totalUpdated += stats.updated;
         }
@@ -410,7 +439,7 @@ describe('morph', () => {
         
         for (const html of streamingUpdates) {
           morphContentOptimized(container, html);
-          const stats = getMorphStats();
+          const stats = getMorphStats(container);
           // First two blocks should always be skipped
           expect(stats.skipped).toBeGreaterThanOrEqual(2);
         }
@@ -432,7 +461,7 @@ describe('morph', () => {
         
         for (const html of blocks) {
           morphContentOptimized(container, html);
-          addedCounts.push(getMorphStats().added);
+          addedCounts.push(getMorphStats(container).added);
         }
         
         // Each update (except first) should add exactly 1 block
@@ -459,8 +488,8 @@ describe('morph', () => {
         
         // Same content - should skip
         morphContentOptimized(container, nestedList);
-        expect(getMorphStats().skipped).toBe(1);
-        expect(getMorphStats().updated).toBe(0);
+        expect(getMorphStats(container).skipped).toBe(1);
+        expect(getMorphStats(container).updated).toBe(0);
       });
 
       it('should handle blockquotes with nested content', () => {
@@ -485,7 +514,7 @@ describe('morph', () => {
         
         morphContentOptimized(container, html2);
         
-        const stats = getMorphStats();
+        const stats = getMorphStats(container);
         expect(stats.skipped).toBe(1); // blockquote unchanged
         expect(stats.updated).toBe(1); // regular p changed
       });
@@ -506,7 +535,7 @@ describe('morph', () => {
         
         // Same table - should skip
         morphContentOptimized(container, table);
-        expect(getMorphStats().skipped).toBe(1);
+        expect(getMorphStats(container).skipped).toBe(1);
       });
 
       it('should handle code blocks with syntax highlighting spans', () => {
@@ -527,8 +556,8 @@ describe('morph', () => {
         
         morphContentOptimized(container, html2);
         
-        expect(getMorphStats().skipped).toBe(1); // code block skipped
-        expect(getMorphStats().added).toBe(1);   // paragraph added
+        expect(getMorphStats(container).skipped).toBe(1); // code block skipped
+        expect(getMorphStats(container).added).toBe(1);   // paragraph added
       });
 
       it('should handle mixed complex content', () => {
@@ -554,8 +583,8 @@ describe('morph', () => {
         
         // Same content - all should be skipped
         morphContentOptimized(container, complexDoc);
-        expect(getMorphStats().skipped).toBe(6);
-        expect(getMorphStats().updated).toBe(0);
+        expect(getMorphStats(container).skipped).toBe(6);
+        expect(getMorphStats(container).updated).toBe(0);
       });
 
       it('should handle deeply nested divs', () => {
@@ -573,12 +602,12 @@ describe('morph', () => {
         
         // Same content - should skip
         morphContentOptimized(container, nested);
-        expect(getMorphStats().skipped).toBe(1);
+        expect(getMorphStats(container).skipped).toBe(1);
         
         // Change deep content - should update entire block
         const changed = nested.replace('Deep content', 'Changed content');
         morphContentOptimized(container, changed);
-        expect(getMorphStats().updated).toBe(1);
+        expect(getMorphStats(container).updated).toBe(1);
       });
     });
 
@@ -590,15 +619,15 @@ describe('morph', () => {
         // Clear all content
         morphContentOptimized(container, '');
         expect(container.children.length).toBe(0);
-        expect(getMorphStats().removed).toBe(1);
+        expect(getMorphStats(container).removed).toBe(1);
       });
 
       it('should handle single element', () => {
         morphContentOptimized(container, '<p>Single</p>');
         morphContentOptimized(container, '<p>Single</p>');
         
-        expect(getMorphStats().skipped).toBe(1);
-        expect(getMorphStats().updated).toBe(0);
+        expect(getMorphStats(container).skipped).toBe(1);
+        expect(getMorphStats(container).updated).toBe(0);
       });
 
       it('should handle complete content replacement', () => {
@@ -607,7 +636,7 @@ describe('morph', () => {
         // Completely different content
         morphContentOptimized(container, '<h1>X</h1><h2>Y</h2>');
         
-        const stats = getMorphStats();
+        const stats = getMorphStats(container);
         expect(stats.updated).toBe(2);
         expect(stats.removed).toBe(1);
         expect(stats.skipped).toBe(0);
@@ -619,7 +648,7 @@ describe('morph', () => {
         // Reorder: all hashes at different positions = all updated
         morphContentOptimized(container, '<p id="c">C</p><p id="a">A</p><p id="b">B</p>');
         
-        const stats = getMorphStats();
+        const stats = getMorphStats(container);
         expect(stats.updated).toBe(3);
         expect(stats.skipped).toBe(0);
       });
@@ -632,29 +661,29 @@ describe('morph', () => {
         morphContentOptimized(container, html2);
         
         // Should detect the change
-        expect(getMorphStats().updated).toBe(1);
+        expect(getMorphStats(container).updated).toBe(1);
       });
 
       it('should handle attribute changes', () => {
         morphContentOptimized(container, '<div class="a">Content</div>');
         morphContentOptimized(container, '<div class="b">Content</div>');
         
-        expect(getMorphStats().updated).toBe(1);
+        expect(getMorphStats(container).updated).toBe(1);
         expect(container.querySelector('div')?.className).toBe('b');
       });
 
       it('should reset state correctly', () => {
         morphContentOptimized(container, '<p>A</p><p>B</p>');
         
-        const stats1 = getMorphStats();
+        const stats1 = getMorphStats(container);
         expect(stats1.added).toBe(2); // First time = all added
         
-        resetElementMorphState();
+        resetElementMorphState(container);
         
-        // After reset, same content should be "added" again
+        // After reset, same content should be "updated" (elements exist but hashes cleared)
         morphContentOptimized(container, '<p>A</p><p>B</p>');
-        const stats2 = getMorphStats();
-        expect(stats2.updated).toBe(2); // Now they're "updates" not "added"
+        const stats2 = getMorphStats(container);
+        expect(stats2.updated).toBe(2); // Hashes don't match (cleared), so "updated"
       });
     });
 
@@ -674,7 +703,7 @@ describe('morph', () => {
         expect(container.children.length).toBe(7);
         
         morphContentOptimized(container, doc);
-        expect(getMorphStats().skipped).toBe(7);
+        expect(getMorphStats(container).skipped).toBe(7);
       });
 
       it('should handle task lists', () => {
@@ -690,7 +719,7 @@ describe('morph', () => {
         expect(container.querySelectorAll('input[checked]').length).toBe(1);
         
         morphContentOptimized(container, tasks);
-        expect(getMorphStats().skipped).toBe(1);
+        expect(getMorphStats(container).skipped).toBe(1);
       });
 
       it('should handle definition lists', () => {
@@ -707,7 +736,7 @@ describe('morph', () => {
         expect(container.querySelectorAll('dt').length).toBe(2);
         
         morphContentOptimized(container, dl);
-        expect(getMorphStats().skipped).toBe(1);
+        expect(getMorphStats(container).skipped).toBe(1);
       });
 
       it('should handle footnotes structure', () => {
@@ -725,7 +754,7 @@ describe('morph', () => {
         expect(container.children.length).toBe(3);
         
         morphContentOptimized(container, doc);
-        expect(getMorphStats().skipped).toBe(3);
+        expect(getMorphStats(container).skipped).toBe(3);
       });
 
       it('should handle math blocks (KaTeX output)', () => {
@@ -744,7 +773,7 @@ describe('morph', () => {
         expect(container.querySelectorAll('.katex').length).toBe(1);
         
         morphContentOptimized(container, math);
-        expect(getMorphStats().skipped).toBe(3);
+        expect(getMorphStats(container).skipped).toBe(3);
       });
 
       it('should handle image with caption', () => {
@@ -762,8 +791,8 @@ describe('morph', () => {
         const fig2 = fig.replace('Following text', 'Updated text');
         morphContentOptimized(container, fig2);
         
-        expect(getMorphStats().skipped).toBe(1); // figure unchanged
-        expect(getMorphStats().updated).toBe(1); // paragraph changed
+        expect(getMorphStats(container).skipped).toBe(1); // figure unchanged
+        expect(getMorphStats(container).updated).toBe(1); // paragraph changed
       });
     });
 
@@ -782,7 +811,7 @@ describe('morph', () => {
         
         // Should be very fast (< 10ms) for 100 blocks
         expect(duration).toBeLessThan(10);
-        expect(getMorphStats().skipped).toBe(100);
+        expect(getMorphStats(container).skipped).toBe(100);
       });
 
       it('should only morph the changing block in large documents', () => {
@@ -795,8 +824,98 @@ describe('morph', () => {
         morphContentOptimized(container, createBlocks('Original middle'));
         morphContentOptimized(container, createBlocks('Changed middle'));
         
-        expect(getMorphStats().updated).toBe(1);
-        expect(getMorphStats().skipped).toBe(49);
+        expect(getMorphStats(container).updated).toBe(1);
+        expect(getMorphStats(container).skipped).toBe(49);
+      });
+    });
+
+    describe('multi-instance isolation', () => {
+      let container2: HTMLDivElement;
+
+      beforeEach(() => {
+        container2 = document.createElement('div');
+        container2.id = 'test-container-2';
+        document.body.appendChild(container2);
+      });
+
+      afterEach(() => {
+        container2.remove();
+      });
+
+      it('should maintain separate state for different containers', () => {
+        // Container 1: Start with 3 paragraphs
+        const content1 = '<p>Para 1</p><p>Para 2</p><p>Para 3</p>';
+        morphContentOptimized(container, content1);
+        
+        // Container 2: Start with different content (2 headings)
+        const content2 = '<h1>Heading 1</h1><h2>Heading 2</h2>';
+        morphContentOptimized(container2, content2);
+        
+        // Container 1: Morph with same content - should skip all 3
+        morphContentOptimized(container, content1);
+        const stats1 = getMorphStats(container);
+        
+        expect(stats1.skipped).toBe(3);
+        expect(stats1.updated).toBe(0);
+        expect(stats1.added).toBe(0);
+      });
+
+      it('should not let container1 state affect container2 stats', () => {
+        // Container 1: Create 5 paragraphs
+        const content1 = '<p>A</p><p>B</p><p>C</p><p>D</p><p>E</p>';
+        morphContentOptimized(container, content1);
+        
+        // Container 2: Create 2 divs
+        const content2 = '<div>X</div><div>Y</div>';
+        morphContentOptimized(container2, content2);
+        const stats2 = getMorphStats(container2);
+        
+        // Container 2 should report its own stats (2 added), not affected by container 1
+        expect(stats2.added).toBe(2);
+        expect(stats2.skipped).toBe(0);
+      });
+
+      it('should correctly track skips per container in streaming simulation', () => {
+        // Simulate two chat messages streaming simultaneously
+        
+        // Message 1 starts
+        morphContentOptimized(container, '<p>Hello</p>');
+        
+        // Message 2 starts
+        morphContentOptimized(container2, '<h1>Title</h1>');
+        
+        // Message 1 continues
+        morphContentOptimized(container, '<p>Hello</p><p>World</p>');
+        const stats1 = getMorphStats(container);
+        
+        // Message 1 should have skipped 1 (Hello), added 1 (World)
+        expect(stats1.skipped).toBe(1);
+        expect(stats1.added).toBe(1);
+        
+        // Message 2 continues
+        morphContentOptimized(container2, '<h1>Title</h1><p>Content</p>');
+        const stats2 = getMorphStats(container2);
+        
+        // Message 2 should have skipped 1 (Title), added 1 (Content)
+        expect(stats2.skipped).toBe(1);
+        expect(stats2.added).toBe(1);
+      });
+
+      it('should handle interleaved morphs correctly', () => {
+        // Rapid interleaved updates between two containers
+        morphContentOptimized(container, '<p>1</p>');
+        morphContentOptimized(container2, '<p>A</p>');
+        morphContentOptimized(container, '<p>1</p><p>2</p>');
+        morphContentOptimized(container2, '<p>A</p><p>B</p>');
+        morphContentOptimized(container, '<p>1</p><p>2</p><p>3</p>');
+        morphContentOptimized(container2, '<p>A</p><p>B</p><p>C</p>');
+        
+        // Final state check - morph same content
+        morphContentOptimized(container, '<p>1</p><p>2</p><p>3</p>');
+        expect(getMorphStats(container).skipped).toBe(3);
+        
+        morphContentOptimized(container2, '<p>A</p><p>B</p><p>C</p>');
+        expect(getMorphStats(container2).skipped).toBe(3);
       });
     });
   });

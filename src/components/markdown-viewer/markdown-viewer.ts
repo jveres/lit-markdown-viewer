@@ -194,7 +194,7 @@ export class MarkdownViewer extends LitElement {
         
         // Log morph stats in dev mode (only structural changes to avoid flooding)
         if (import.meta.env.DEV) {
-          const stats = getMorphStats();
+          const stats = getMorphStats(this._containerRef);
           const contentLength = this._throttledText.length;
           // Only log when content length changes AND we have structural changes
           if ((stats.added > 0 || stats.removed > 0) && contentLength !== this._lastLoggedContentLength) {
@@ -391,7 +391,7 @@ export class MarkdownViewer extends LitElement {
     this._lastMorphDuration = 0;
     this._lastLoggedContentLength = 0;
     this._resetStreamingStats();
-    resetMorphCache();
+    resetMorphCache(this._containerRef);
     this._cursorController?.reset();
   }
 
