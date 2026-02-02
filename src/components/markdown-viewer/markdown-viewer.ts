@@ -189,11 +189,14 @@ export class MarkdownViewer extends LitElement {
         this._adjustAdaptiveThrottle();
         this._trackMorphStats();
         
-        // Log morph stats in dev mode
+        // Log morph stats in dev mode (only structural changes to avoid flooding)
         if (import.meta.env.DEV) {
           const stats = getMorphStats();
-          if (stats.skipped > 0) {
-            console.log(`🔄 Morph: ${stats.updated} updated, ${stats.skipped} skipped, ${stats.added} added`);
+          if (stats.added > 0 || stats.removed > 0) {
+            const parts = [];
+            if (stats.added > 0) parts.push(`+${stats.added} added`);
+            if (stats.removed > 0) parts.push(`-${stats.removed} removed`);
+            console.log(`🔄 Morph: ${parts.join(', ')} (${stats.skipped} unchanged)`);
           }
         }
 
