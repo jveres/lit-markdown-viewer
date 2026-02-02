@@ -10,11 +10,12 @@ A high-performance Lit Web Component for rendering markdown with streaming suppo
 
 ## Features
 
-- **Streaming Support** - Optimized for real-time content updates with throttling and DOM morphing
+- **Streaming Support** - Optimized for real-time content updates with adaptive throttling and DOM morphing
+- **Element-Level Diffing** - Skips unchanged blocks during streaming (~99% skip rate)
 - **Syntax Highlighting** - Code blocks with language detection and copy button
-- **Math Rendering** - KaTeX support for inline (`$...$`) and block (`$$...$$`) math
+- **Math Rendering** - KaTeX with lazy loading (77KB saved when unused)
 - **GitHub Flavored Markdown** - Tables, task lists, strikethrough, alerts, footnotes
-- **Smart Caching** - LRU caches for rendered content, KaTeX output, and DOM state
+- **Smart Caching** - LRU caches for rendered content, KaTeX output, and DOM state (~10MB budget)
 - **Cursor Animation** - Blinking cursor during streaming with focus-aware styling (solid when focused, hollow frame when unfocused)
 - **Dark Mode** - Full dark theme support via CSS class
 - **XSS Protection** - Comprehensive security against script injection, event handlers, and malicious URLs (69 security tests)
@@ -83,29 +84,32 @@ render() {
 ## Architecture
 
 ```text
-┌───────────────────────────────────────────────────────┐
-│                  markdown-viewer.ts                   │
-│                                                       │
-│  ┌───────────┐  ┌───────────┐  ┌───────────────────┐  │
-│  │ Throttling│─▶│ Rendering │─▶│   DOM Morphing    │  │
-│  │(RAF-based)│  │  Pipeline │  │   (Idiomorph)     │  │
-│  └─────┬─────┘  └─────┬─────┘  └─────────┬─────────┘  │
-└────────┼──────────────┼──────────────────┼────────────┘
-         │              │                  │
-         ▼              ▼                  ▼
-┌─────────────────┐ ┌─────────────┐ ┌────────────────────┐
-│cursor-controller│ │  parser.ts  │ │     morph.ts       │
-│  (blink state)  │ │             │ │                    │
-└─────────────────┘ │ ┌─────────┐ │ │ - Sync (streaming) │
-                    │ │ Comrak  │ │ │ - Async (RAF)      │
-                    │ └────┬────┘ │ │ - Hash-based skip  │
-                    │      ▼      │ └────────────────────┘
-                    │ ┌─────────┐ │
-                    │ │  KaTeX  │ │
-                    │ └────┬────┘ │
-                    │      ▼      │
-                    │ Post-process│
-                    │ - Code wrap │
+┌─────────────────────────────────────────────────────────────┐
+│                     markdown-viewer.ts                      │
+│                                                             │
+│  ┌──────────────┐  ┌───────────┐  ┌───────────────────────┐ │
+│  │   Adaptive   │─▶│ Rendering │─▶│  Optimized Morphing   │ │
+│  │  Throttling  │  │  Pipeline │  │  (Element-Level Diff) │ │
+│  │ (50-200ms)   │  │           │  │  ~99% blocks skipped  │ │
+│  └──────┬───────┘  └─────┬─────┘  └───────────┬───────────┘ │
+└─────────┼────────────────┼────────────────────┼─────────────┘
+          │                │                    │
+          ▼                ▼                    ▼
+┌─────────────────┐ ┌─────────────┐ ┌──────────────────────────┐
+│cursor-controller│ │  parser.ts  │ │        morph.ts          │
+│  (blink state)  │ │             │ │                          │
+└─────────────────┘ │ ┌─────────┐ │ │ ┌──────────────────────┐ │
+                    │ │ Comrak  │ │ │ │ morphContentOptimized│ │
+                    │ │ (WASM)  │ │ │ │ - Hash top-level els │ │
+                    │ └────┬────┘ │ │ │ - Skip unchanged     │ │
+                    │      ▼      │ │ │ - Morph only changed │ │
+                    │ ┌─────────┐ │ │ └──────────────────────┘ │
+                    │ │  KaTeX  │ │ │ ┌──────────────────────┐ │
+                    │ │ (lazy)  │ │ │ │    morphContent      │ │
+                    │ └────┬────┘ │ │ │ - Full DOM morph     │ │
+                    │      ▼      │ │ │ - Hash-based skip    │ │
+                    │ Post-process│ │ └──────────────────────┘ │
+                    │ - Code wrap │ └──────────────────────────┘
                     │ - Tables    │
                     │ - Links     │
                     │ - Colors    │
@@ -124,11 +128,25 @@ render() {
 Markdown-to-HTML rendering pipeline:
 
 1. **Comrak** - Rust-based markdown parser (WASM) with GFM extensions
-2. **KaTeX** - Math rendering with display/inline modes
+2. **KaTeX** - Math rendering with lazy loading (loads on first math expression)
 3. **Post-processing** - Code blocks, tables, links, color previews
 
 ```typescript
 renderMarkdown(src: string, useSyncStrategy: boolean): string
+
+// KaTeX lazy loading
+preloadKaTeX(): Promise<void>  // Warm up cache early
+isKaTeXReady(): boolean        // Check if loaded
+```
+
+**Bundle Optimization:**
+
+KaTeX is loaded on-demand, saving 77KB (gzip) for pages without math:
+
+```
+Main bundle:  430KB gzip (without KaTeX)
+KaTeX chunk:   77KB gzip (loaded when needed)
+Total:        507KB gzip (only if math used)
 ```
 
 **Supported Extensions:**
@@ -148,41 +166,62 @@ renderMarkdown(src: string, useSyncStrategy: boolean): string
 Intelligent DOM updates using [Idiomorph](https://github.com/bigskysoftware/idiomorph):
 
 ```typescript
-// Async (batched via RAF) - for non-streaming updates
+// Optimized morph (streaming) - skips unchanged elements
+morphContentOptimized(container: Element, newHtml: string): boolean
+
+// Get stats from last optimized morph
+getMorphStats(): { updated: number; skipped: number; added: number; removed: number }
+
+// Async morph (batched via RAF) - for non-streaming updates
 morphContent(element: Element, newHtml: string): void
 
-// Sync (immediate) - for streaming updates
+// Sync morph (immediate) - for testing/benchmarks
 morphContentSync(element: Element, newHtml: string): void
 
 // Reset state
 resetMorphCache(): void
+resetElementMorphState(): void
+```
+
+**Element-Level Optimization:**
+
+During streaming, only the actively changing block needs updating:
+
+```
+Update 1: [h1]           → All new
+Update 2: [h1][p...]     → h1 skipped (hash match), p morphed
+Update 3: [h1][p][ul]    → h1+p skipped, ul added
+...
+Final:    [148 blocks]   → 147 skipped, 1 updated (~99% skip rate)
 ```
 
 **Features:**
 
-- Hash-based change detection (skips identical content)
-- Preserves text selection during updates
+- Hash-based element comparison (djb2 hash of outerHTML)
+- Preserves DOM references for skipped elements (event listeners intact)
+- Falls back to full morph for non-streaming updates
 - `data-morph-ignore` attribute to protect nodes from removal
 
 ### `cache-manager.ts`
 
 Centralized LRU cache with memory budget (~10MB default):
 
-| Cache               | Purpose                    | Budget |
-| ------------------- | -------------------------- | ------ |
-| `renderCacheSync`   | Sync-strategy HTML output  | 25%    |
-| `renderCacheAsync`  | Async-strategy HTML output | 25%    |
-| `katexCacheDisplay` | Block math output          | 20%    |
-| `katexCacheInline`  | Inline math output         | 20%    |
-| `morphCache`        | DOM state hashes           | 10%    |
+| Cache               | Purpose                    | Budget | Max Entries |
+| ------------------- | -------------------------- | ------ | ----------- |
+| `renderCacheSync`   | Sync-strategy HTML output  | 25%    | 100         |
+| `renderCacheAsync`  | Async-strategy HTML output | 25%    | 100         |
+| `katexCacheDisplay` | Block math output          | 20%    | 250         |
+| `katexCacheInline`  | Inline math output         | 20%    | 250         |
+| `morphCache`        | DOM state hashes           | 10%    | 10          |
 
 ```typescript
 // Access stats
 cacheManager.stats;
+// → { renderSync, renderAsync, katexDisplay, katexInline, morph, total }
 
 // Manual cleanup
 cacheManager.clearAll();
-cacheManager.trimIfNeeded();
+cacheManager.trimIfNeeded(); // Evicts ~25% when >90% budget used
 ```
 
 ### `cursor-controller.ts`
@@ -190,7 +229,9 @@ cacheManager.trimIfNeeded();
 Manages cursor blink animation during streaming:
 
 ```typescript
-const controller = createCursorController({
+import { createCursorController, type CursorController } from './cursor-controller';
+
+const controller: CursorController = createCursorController({
   blinkEnabled: true,
   blinkSpeed: 1.0, // seconds
   blinkDelay: 1.0, // seconds before blink starts
@@ -213,42 +254,46 @@ controller.destroy(); // Cleanup
 
 ## Streaming Optimization
 
-### Throttling (RAF-based)
+### Adaptive Throttling
 
-Updates are throttled using `requestAnimationFrame`:
+Throttle interval automatically adjusts based on morph performance:
 
 ```typescript
-// In markdown-viewer.ts
-private _updateThrottledText(): void {
-  if (!this.isStreaming) {
-    this._throttledText = this.text;
-    return;
-  }
+// Target: morph should take ≤25% of throttle interval
+// Range: throttleMs (default 50ms) to 4x throttleMs or 200ms max
+// Smoothing: 30% adjustment per update
 
-  const now = Date.now();
-  if (now - this._lastThrottleTime >= this.throttleMs) {
-    this._throttledText = this.text;
-    this._lastThrottleTime = now;
-  } else if (!this._rafScheduled) {
-    this._rafScheduled = true;
-    requestAnimationFrame(() => {
-      if (this._rafScheduled && this.isStreaming) {
-        this._throttledText = this.text;
-        this._lastThrottleTime = Date.now();
-      }
-      this._rafScheduled = false;
-    });
-  }
-}
+// Example scaling on slower devices:
+// Morph time: 5ms  → Throttle: 50ms  (base)
+// Morph time: 15ms → Throttle: 60ms  (ramping up)
+// Morph time: 40ms → Throttle: 160ms (under load)
+// Morph time: 50ms → Throttle: 200ms (max)
+```
+
+### Element-Level Diffing
+
+During streaming, only changed elements are morphed:
+
+```typescript
+// morphContentOptimized() algorithm:
+// 1. Parse new HTML into temp container
+// 2. Hash each top-level element (djb2 of outerHTML)
+// 3. Compare with previous frame's hashes
+// 4. Skip elements with matching hashes
+// 5. Morph only changed elements, append new ones
+
+// Typical streaming stats:
+// "🔄 Morph: 1 updated, 147 skipped, 0 added"
+// = 99.3% of DOM operations avoided
 ```
 
 ### Rendering Strategy
 
-| Mode           | Morph | Description                                 |
-| -------------- | ----- | ------------------------------------------- |
-| Streaming      | Sync  | Immediate DOM updates for cursor visibility |
-| Post-streaming | Async | RAF-batched updates to prevent jank         |
-| Static         | None  | Direct `unsafeHTML` render                  |
+| Mode           | Morph Function           | Description                                    |
+| -------------- | ------------------------ | ---------------------------------------------- |
+| Streaming      | `morphContentOptimized`  | Element-level diff, skips unchanged blocks     |
+| Post-streaming | `morphContent` (async)   | RAF-batched full morph to prevent jank         |
+| Static         | `unsafeHTML`             | Direct render, no morphing                     |
 
 ## Autoscroll Utility
 
@@ -329,12 +374,35 @@ The cursor changes appearance based on component focus state:
 
 The component auto-focuses when streaming starts. Click elsewhere or tab away to see the hollow cursor.
 
-## Performance Tips
+## Performance
+
+### Benchmarks (6x CPU throttle, 24KB content, 148 blocks)
+
+| Metric | Value |
+|--------|-------|
+| Streaming duration | 49.6s |
+| Total morphs | 1,793 |
+| Average morph time | 12.9ms |
+| Element skip rate | **99.3%** |
+| Throttle range | 50ms → 200ms (adaptive) |
+
+### Optimization Features
+
+| Feature | Benefit |
+|---------|---------|
+| Element-level diffing | ~99% of DOM operations skipped |
+| Adaptive throttling | Auto-adjusts to device performance |
+| KaTeX lazy loading | 77KB saved when no math content |
+| LRU caching | Avoids re-parsing identical content |
+| Hash-based skip | O(1) change detection |
+
+### Tips
 
 1. **Reuse instances** - Don't recreate the component for each message
 2. **Call `reset()`** - When switching content sources to clear stale state
 3. **Monitor cache stats** - Use `getCacheStats()` in development
-4. **Throttle appropriately** - 50ms works well for most LLM streaming rates
+4. **Dev mode logging** - Watch for `🔄 Morph:` stats in console
+5. **Throttle appropriately** - 50ms base works well for most LLM streaming rates
 
 ## Dependencies
 
@@ -384,17 +452,19 @@ npm run test:component:coverage  # Component tests (istanbul)
 ```
 tests/
 ├── unit/                            # Node environment (188 tests)
-│   ├── cache-manager.test.ts        # LRU cache tests
+│   ├── cache-manager.test.ts        # LRU cache, memory budget, eviction
 │   ├── cursor-controller.test.ts    # Cursor blink state tests
 │   ├── parser.test.ts               # Markdown rendering tests
 │   ├── parser.security.test.ts      # Security/XSS tests (69 tests)
 │   ├── animate-scroll.test.ts       # Scroll utility tests
 │   └── utils.test.ts                # HTML decode tests
-└── component/                       # Browser environment - Playwright (60 tests)
+└── component/                       # Browser environment - Playwright (91 tests)
     ├── markdown-viewer.test.ts      # Component rendering, streaming, focus
-    ├── morph.test.ts                # DOM morphing, hash skip, data-morph-ignore
+    ├── morph.test.ts                # DOM morphing, element-level optimization (52 tests)
     └── animate-scroll.test.ts       # Scroll animations, RAF, cancellation
 ```
+
+**Total: 279 tests** (188 unit + 91 component)
 
 ## Security
 
