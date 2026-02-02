@@ -385,9 +385,9 @@ export class DemoPage extends LitElement {
   // Reactive State
   // ─────────────────────────────────────────────────────────────────────────────
 
-  @state() private _text = "";
+  @state() private _text = sampleMarkdown;
   @state() private _isStreaming = false;
-  @state() private _charCount = 0;
+  @state() private _charCount = sampleMarkdown.length;
   @state() private _isPaused = false;
   @state() private _speed = "normal";
   @state() private _latency = "heavy";
@@ -410,7 +410,7 @@ export class DemoPage extends LitElement {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private _streamingActive = false;
-  private _currentIndex = 0;
+  private _currentIndex = sampleMarkdown.length;
   private _lastContentHeight = 0;
   private _lastTouchY = 0;
   private _scrollButtonVisible = false;
