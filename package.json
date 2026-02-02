@@ -32,7 +32,10 @@
     "test:component": "vitest run --config vitest.browser.config.ts",
     "test:component:watch": "vitest --config vitest.browser.config.ts",
     "test:component:coverage": "vitest run --config vitest.browser.config.ts --coverage",
-    "test:all": "npm test && npm run test:component"
+    "test:all": "npm test && npm run test:component",
+    "bench": "vitest bench --run",
+    "bench:watch": "vitest bench",
+    "bench:browser": "vitest bench --run --config vitest.bench.browser.config.ts"
   },
   "dependencies": {
     "@nick/comrak": "npm:@jsr/nick__comrak@^0.48.0-rc.0",
